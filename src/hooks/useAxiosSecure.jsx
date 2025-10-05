@@ -92,7 +92,7 @@ import axios from 'axios';
 
 const useAxiosSecure = () => {
   const axiosSecure = axios.create({
-    baseURL: 'https://frasa-backend.vercel.app',
+    baseURL: 'https://frasa-backend.vercel.app/api',
   });
 
   useEffect(() => {

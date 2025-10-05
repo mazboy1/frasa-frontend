@@ -56,7 +56,7 @@ import axios from 'axios';
 
 const useAxiosFetch = () => {
   const axiosInstance = axios.create({
-    baseURL: 'https://frasa-backend.vercel.app', // <-- pastikan /api
+    baseURL: 'https://frasa-backend.vercel.app/api', // <-- pastikan /api
     // timeout: 10000, // optional
   });
 
