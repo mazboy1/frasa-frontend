@@ -1,4 +1,3 @@
-// components/Login.jsx - FIXED VERSION
 import React, { useState } from 'react';
 import { 
   MdOutlineRemoveRedEye, 
@@ -9,17 +8,47 @@ import { FiMail, FiLock } from "react-icons/fi";
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import GoogleLogin from '../../components/Social/GoogleLogin';
 import useAuth from '../../hooks/useAuth';
-import { motion } from 'framer-motion';
 import Swal from 'sweetalert2';
+
+// Fallback auth for safety
+const fallbackAuth = {
+  login: async (email, password) => {
+    console.log("🔄 Fallback login called");
+    throw new Error("Authentication system is temporarily unavailable");
+  },
+  user: null,
+  loading: false,
+  error: null,
+  setError: () => {},
+  setLoading: () => {}
+};
 
 const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isFocused, setIsFocused] = useState({ email: false, password: false });
-  const location = useLocation();
+  const [localError, setLocalError] = useState('');
+  const [localLoading, setLocalLoading] = useState(false);
   
-  // ✅ FIX: Gunakan 'loading' bukan 'loader'
-  const { login, error, setError, loading, setLoading } = useAuth();
+  const location = useLocation();
   const navigate = useNavigate();
+
+  // Safe auth with fallback
+  let auth;
+  try {
+    auth = useAuth();
+    if (auth._isFallback || typeof auth.login !== 'function') {
+      auth = fallbackAuth;
+    }
+  } catch (error) {
+    auth = fallbackAuth;
+    setLocalError("Authentication system error");
+  }
+
+  const { login, error: authError, setError, loading: authLoading, setLoading } = auth;
+  
+  // Use local state if auth state is problematic
+  const error = authError || localError;
+  const loading = (authLoading && typeof authLoading === 'boolean') ? authLoading : localLoading;
 
   const showSuccessAlert = () => {
     Swal.fire({
@@ -29,7 +58,6 @@ const Login = () => {
       confirmButtonText: 'Lanjutkan',
       confirmButtonColor: '#4f46e5',
       timer: 2000,
-      timerProgressBar: true,
     });
   };
 
@@ -45,51 +73,55 @@ const Login = () => {
 
   const handleSubmit = async e => {
     e.preventDefault();
-    setError('');
-    setLoading(true); // ✅ FIX: setLoading bukan setLoader
-
+    setLocalError('');
+    setError?.('');
+    
     try {
+      setLocalLoading(true);
+      setLoading?.(true);
+
       const data = new FormData(e.target);
       const formData = Object.fromEntries(data);
       
+      console.log("🔄 Login attempt:", formData.email);
+      
+      // Validate inputs
+      if (!formData.email || !formData.password) {
+        throw new Error("Email dan password harus diisi");
+      }
+
       await login(formData.email, formData.password);
       showSuccessAlert();
       navigate(location.state?.from || "/dashboard");
+      
     } catch (err) {
-      console.error("Login error:", err);
+      console.error("❌ Login error:", err);
       const errorMessage = err.message || "Terjadi kesalahan saat login";
-      setError(errorMessage);
+      setLocalError(errorMessage);
+      setError?.(errorMessage);
       showErrorAlert(errorMessage);
-      setLoading(false); // ✅ FIX: setLoading bukan setLoader
+    } finally {
+      setLocalLoading(false);
+      setLoading?.(false);
     }
-  }
+  };
 
   const handleFocus = (field) => {
     setIsFocused(prev => ({ ...prev, [field]: true }));
-  }
+  };
 
   const handleBlur = (field) => {
     setIsFocused(prev => ({ ...prev, [field]: false }));
-  }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center px-4 py-8">
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="w-full max-w-md"
-      >
+      <div className="w-full max-w-md">
         {/* Header */}
         <div className="text-center mb-8">
-          <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ delay: 0.2, duration: 0.5 }}
-            className="w-16 h-16 bg-secondary rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg"
-          >
+          <div className="w-16 h-16 bg-secondary rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
             <MdLockOutline className="h-8 w-8 text-white" />
-          </motion.div>
+          </div>
           <h1 className="text-3xl font-bold text-gray-800 mb-2">
             Selamat Datang Kembali
           </h1>
@@ -99,23 +131,14 @@ const Login = () => {
         </div>
 
         {/* Login Card */}
-        <motion.div 
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.3, duration: 0.5 }}
-          className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100"
-        >
+        <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
           {error && (
-            <motion.div 
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm mb-6 flex items-center"
-            >
+            <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm mb-6 flex items-center">
               <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              {error.includes("auth/") ? "Email atau password salah" : error}
-            </motion.div>
+              {error}
+            </div>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-6">
@@ -135,7 +158,7 @@ const Login = () => {
                   placeholder="email@contoh.com" 
                   className="w-full border border-gray-300 rounded-lg px-4 py-3 pl-11 pr-4 text-gray-900 placeholder-gray-500 focus:outline-none focus:border-secondary transition-colors duration-200"
                   required
-                  disabled={loading} // ✅ FIX: loading bukan loader
+                  disabled={loading}
                   onFocus={() => handleFocus('email')}
                   onBlur={() => handleBlur('email')}
                 />
@@ -159,7 +182,7 @@ const Login = () => {
                   placeholder="Masukkan kata sandi"
                   className="w-full border border-gray-300 rounded-lg px-4 py-3 pl-11 pr-12 text-gray-900 placeholder-gray-500 focus:outline-none focus:border-secondary transition-colors duration-200"
                   required
-                  disabled={loading} // ✅ FIX: loading bukan loader
+                  disabled={loading}
                   onFocus={() => handleFocus('password')}
                   onBlur={() => handleBlur('password')}
                 />
@@ -168,7 +191,7 @@ const Login = () => {
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors duration-200"
-                  disabled={loading} // ✅ FIX: loading bukan loader
+                  disabled={loading}
                 >
                   {showPassword ? (
                     <MdOutlineVisibilityOff className="h-5 w-5" />
@@ -188,18 +211,16 @@ const Login = () => {
             </div>
 
             {/* Submit Button */}
-            <motion.button 
-              whileHover={{ scale: loading ? 1 : 1.02 }}
-              whileTap={{ scale: loading ? 1 : 0.98 }}
+            <button 
               type="submit" 
-              disabled={loading} // ✅ FIX: loading bukan loader
+              disabled={loading}
               className={`w-full bg-gradient-to-r from-secondary to-secondary-dark text-white py-3 px-4 rounded-lg font-medium transition-all duration-200 ${
                 loading 
                   ? 'opacity-70 cursor-not-allowed' 
                   : 'hover:shadow-lg hover:from-secondary-dark hover:to-secondary'
               } flex items-center justify-center space-x-2`}
             >
-              {loading ? ( // ✅ FIX: loading bukan loader
+              {loading ? (
                 <>
                   <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                   <span>Sedang masuk...</span>
@@ -207,7 +228,7 @@ const Login = () => {
               ) : (
                 <span>Masuk ke Akun</span>
               )}
-            </motion.button>
+            </button>
           </form>
 
           {/* Divider */}
@@ -232,7 +253,7 @@ const Login = () => {
               </Link>
             </p>
           </div>
-        </motion.div>
+        </div>
 
         {/* Footer */}
         <div className="text-center mt-6">
@@ -240,7 +261,7 @@ const Login = () => {
             © 2024 Frasa ID. All rights reserved.
           </p>
         </div>
-      </motion.div>
+      </div>
     </div>
   );
 };

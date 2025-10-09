@@ -1,3 +1,4 @@
+// hooks/useUser.js - FINAL FIXED VERSION
 import { useQuery } from '@tanstack/react-query';
 import useAxiosSecure from "./useAxiosSecure";
 import useAuth from './useAuth';
@@ -37,7 +38,7 @@ const useUser = () => {
                     
                     // Try to update backend
                     try {
-                        await axiosSecure.patch(`/emergency/update-role/${user.email}`, {
+                        await axiosSecure.patch(`/user/update-role/${user.email}`, {
                             role: "user"
                         });
                         console.log('✅ useUser: Backend role updated successfully');
@@ -98,6 +99,6 @@ const useUser = () => {
         error, 
         refetch 
     };
-}
+}; // ✅ CLOSING BRACKET YANG DIBUTUHKAN
 
 export default useUser;
