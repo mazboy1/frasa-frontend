@@ -1,6 +1,6 @@
+// components/Login.jsx - FIXED VERSION
 import React, { useState } from 'react';
 import { 
-  MdOutlineAlternateEmail, 
   MdOutlineRemoveRedEye, 
   MdOutlineVisibilityOff,
   MdLockOutline
@@ -16,7 +16,9 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isFocused, setIsFocused] = useState({ email: false, password: false });
   const location = useLocation();
-  const { login, error, setError, loader, setLoader } = useAuth();
+  
+  // ✅ FIX: Gunakan 'loading' bukan 'loader'
+  const { login, error, setError, loading, setLoading } = useAuth();
   const navigate = useNavigate();
 
   const showSuccessAlert = () => {
@@ -28,12 +30,6 @@ const Login = () => {
       confirmButtonColor: '#4f46e5',
       timer: 2000,
       timerProgressBar: true,
-      showClass: {
-        popup: 'animate__animated animate__fadeInDown'
-      },
-      hideClass: {
-        popup: 'animate__animated animate__fadeOutUp'
-      }
     });
   };
 
@@ -50,7 +46,7 @@ const Login = () => {
   const handleSubmit = async e => {
     e.preventDefault();
     setError('');
-    setLoader(true);
+    setLoading(true); // ✅ FIX: setLoading bukan setLoader
 
     try {
       const data = new FormData(e.target);
@@ -64,7 +60,7 @@ const Login = () => {
       const errorMessage = err.message || "Terjadi kesalahan saat login";
       setError(errorMessage);
       showErrorAlert(errorMessage);
-      setLoader(false);
+      setLoading(false); // ✅ FIX: setLoading bukan setLoader
     }
   }
 
@@ -139,7 +135,7 @@ const Login = () => {
                   placeholder="email@contoh.com" 
                   className="w-full border border-gray-300 rounded-lg px-4 py-3 pl-11 pr-4 text-gray-900 placeholder-gray-500 focus:outline-none focus:border-secondary transition-colors duration-200"
                   required
-                  disabled={loader}
+                  disabled={loading} // ✅ FIX: loading bukan loader
                   onFocus={() => handleFocus('email')}
                   onBlur={() => handleBlur('email')}
                 />
@@ -163,7 +159,7 @@ const Login = () => {
                   placeholder="Masukkan kata sandi"
                   className="w-full border border-gray-300 rounded-lg px-4 py-3 pl-11 pr-12 text-gray-900 placeholder-gray-500 focus:outline-none focus:border-secondary transition-colors duration-200"
                   required
-                  disabled={loader}
+                  disabled={loading} // ✅ FIX: loading bukan loader
                   onFocus={() => handleFocus('password')}
                   onBlur={() => handleBlur('password')}
                 />
@@ -172,6 +168,7 @@ const Login = () => {
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors duration-200"
+                  disabled={loading} // ✅ FIX: loading bukan loader
                 >
                   {showPassword ? (
                     <MdOutlineVisibilityOff className="h-5 w-5" />
@@ -192,17 +189,17 @@ const Login = () => {
 
             {/* Submit Button */}
             <motion.button 
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
+              whileHover={{ scale: loading ? 1 : 1.02 }}
+              whileTap={{ scale: loading ? 1 : 0.98 }}
               type="submit" 
-              disabled={loader}
+              disabled={loading} // ✅ FIX: loading bukan loader
               className={`w-full bg-gradient-to-r from-secondary to-secondary-dark text-white py-3 px-4 rounded-lg font-medium transition-all duration-200 ${
-                loader 
+                loading 
                   ? 'opacity-70 cursor-not-allowed' 
                   : 'hover:shadow-lg hover:from-secondary-dark hover:to-secondary'
               } flex items-center justify-center space-x-2`}
             >
-              {loader ? (
+              {loading ? ( // ✅ FIX: loading bukan loader
                 <>
                   <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                   <span>Sedang masuk...</span>
