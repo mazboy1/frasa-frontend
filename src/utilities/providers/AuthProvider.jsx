@@ -1,123 +1,4 @@
-{
-
-    // import React, { Children, createContext, useEffect, useState } from 'react'
-    // import {app} from '../../config/firebase.init'
-    // import {getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile, signOut, GoogleAuthProvider, signInWithPopup, onAuthStateChanged} from "firebase/auth";
-    // import axios from 'axios';
-    
-    // export  const AuthContext = createContext()
-    
-    
-    // const AuthProvider = ({children}) => {
-    //     const [user, setUser] = useState(null);
-    //     const [loader, setLoader] = useState(true);
-    //     const [error, setError] = useState("");
-    
-    //     const auth = getAuth(app);
-    
-    
-    //     // signUp new user
-    //     const signUp = async (email, password) => {
-    //     try {
-    //         setLoader(true);
-    //         return await createUserWithEmailAndPassword(auth, email, password)
-    //     } catch (error) { 
-    //         setError(error.code);
-    //         throw error;
-    //     }
-    // }
-    
-    
-    
-    //     // login user
-    //     const login = async(email, password) => {
-    //         try {
-    //             setLoader(true)
-    //             return await signInWithEmailAndPassword(auth, email, password)
-    
-    //         } catch (error) {
-    //             setError(error.code);
-    //             throw error;
-                
-    //         }
-    
-    //     }
-    
-    //     // logout
-    //     const logout = async () => {
-    //         try {
-    //             return await signOut(auth)
-    
-    //         } catch (error) {
-    //             setError(error.code);
-    //             throw error            
-    //         }
-    //     }
-        
-    //     // update user
-    //     const updateUser = async (name, photo) => {
-    //         try {
-    //           await updateProfile(auth.currentUser, {
-    //             displayName: name,
-    //             photoURL: photo
-    //          });
-    //             setUser(auth.currentUser);
-    //         } catch (error) {
-    //             setError(error.code);
-    //             throw error;
-    //         }
-    //     };
-    
-    
-    //     // google login
-    //     const googleProvider = new GoogleAuthProvider();
-    //     const googleLogin = async () => {
-    //         try {
-    //             setLoader(true)
-    //             return await signInWithPopup(auth,googleProvider)
-    
-    //         } catch (error) {
-    //             setError(error.code);
-    //             throw error            
-    //         }
-    //     }
-    
-    //     // observer users
-    //     useEffect(() => {
-    //         const unsubscribe = auth.onAuthStateChanged((user) => {
-    //             setUser(user)
-    
-    //             if(user) {
-    //                 axios.post("https://frasa-backend.vercel.app/api/set-token", {email: user.email, name: user.displayName})
-    //                 .then((data) => {
-    //                     if(data.data.token) {
-    //                         localStorage.setItem('token', data.data.token);
-    //                         setLoader(false)
-    //                     }
-    //                 })
-    //             }else{
-    //                 localStorage.removeItem('token')
-    //                 setLoader(false)
-    //             }
-    //         })
-    
-    //         return () => unsubscribe()
-    //     }, [])
-    
-    
-    //     const contextVale = {user, signUp, login, logout, updateUser, googleLogin, error, setError, loader, setLoader}
-    
-    //   return (
-    //     <AuthContext.Provider value={contextVale}>
-    //         {children}
-    //     </AuthContext.Provider> 
-    //   )
-    // }
-    
-    // export default AuthProvider
-}
-
-// src/utilities/providers/AuthProvider.jsx  (sesuaikan path)
+// utilities/providers/AuthProvider.jsx - FINAL FIXED VERSION
 import React, { createContext, useEffect, useState } from 'react';
 import { app } from '../../config/firebase.init';
 import {
@@ -130,20 +11,21 @@ import {
   signInWithPopup,
   onAuthStateChanged,
 } from "firebase/auth";
-import useAxiosFetch from '../../hooks/useAxiosFetch'; // path sesuai struktur
+import axios from 'axios';
 
 export const AuthContext = createContext();
 
 const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [loader, setLoader] = useState(true);
+  const [loading, setLoading] = useState(true); // ✅ UBAH loader → loading
   const [error, setError] = useState("");
-  const auth = getAuth(app);
-  const axiosFetch = useAxiosFetch();
 
+  const auth = getAuth(app);
+
+  // ✅ SIGN UP
   const signUp = async (email, password) => {
     try {
-      setLoader(true);
+      setLoading(true);
       return await createUserWithEmailAndPassword(auth, email, password);
     } catch (err) {
       setError(err.code);
@@ -151,9 +33,10 @@ const AuthProvider = ({ children }) => {
     }
   };
 
+  // ✅ LOGIN
   const login = async (email, password) => {
     try {
-      setLoader(true);
+      setLoading(true);
       return await signInWithEmailAndPassword(auth, email, password);
     } catch (err) {
       setError(err.code);
@@ -161,19 +44,21 @@ const AuthProvider = ({ children }) => {
     }
   };
 
+  // ✅ LOGOUT
   const logout = async () => {
     try {
-      setLoader(true);
+      setLoading(true);
       await signOut(auth);
-      localStorage.removeItem('access-token');
+      localStorage.removeItem('token'); // ✅ CONSISTENT: token
       setUser(null);
-      setLoader(false);
+      setLoading(false);
     } catch (err) {
       setError(err.code);
       throw err;
     }
   };
 
+  // ✅ UPDATE USER
   const updateUser = async (name, photo) => {
     try {
       await updateProfile(auth.currentUser, {
@@ -187,10 +72,11 @@ const AuthProvider = ({ children }) => {
     }
   };
 
+  // ✅ GOOGLE LOGIN
   const googleProvider = new GoogleAuthProvider();
   const googleLogin = async () => {
     try {
-      setLoader(true);
+      setLoading(true);
       return await signInWithPopup(auth, googleProvider);
     } catch (err) {
       setError(err.code);
@@ -198,47 +84,59 @@ const AuthProvider = ({ children }) => {
     }
   };
 
+  // ✅ AUTH STATE OBSERVER - FIXED VERSION
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (usr) => {
-      setUser(usr);
-      if (usr) {
-        // request token from backend and store it
-        axiosFetch.post('/set-token', { email: usr.email, name: usr.displayName })
-          .then((res) => {
-            const token = res.data?.token;
-            if (token) {
-              localStorage.setItem('access-token', token);
-            }
-            setLoader(false);
-          })
-          .catch((err) => {
-            console.error('set-token error', err);
-            localStorage.removeItem('access-token');
-            setLoader(false);
-          });
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      console.log('🔥 Auth State Changed:', currentUser);
+      setUser(currentUser);
+
+      if (currentUser) {
+        // ✅ POST TOKEN TO BACKEND
+        axios.post("https://frasa-backend.vercel.app/api/set-token", {
+          email: currentUser.email,
+          name: currentUser.displayName
+        })
+        .then((response) => {
+          if (response.data.token) {
+            localStorage.setItem('token', response.data.token); // ✅ CONSISTENT: token
+            console.log('✅ Token saved to localStorage');
+          }
+          setLoading(false);
+        })
+        .catch((error) => {
+          console.error('❌ Token API Error:', error);
+          localStorage.removeItem('token');
+          setLoading(false);
+        });
       } else {
-        localStorage.removeItem('access-token');
-        setLoader(false);
+        localStorage.removeItem('token'); // ✅ CONSISTENT: token
+        setLoading(false);
       }
     });
 
     return () => unsubscribe();
-  }, []); // eslint-disable-line
+  }, [auth]);
 
+  // ✅ CONTEXT VALUE - CONSISTENT NAMING
   const contextValue = {
     user,
+    loading, // ✅ UBAH: loader → loading
+    error,
+    setError,
     signUp,
     login,
     logout,
     updateUser,
-    googleLogin,
-    error,
-    setError,
-    loader,
-    setLoader,
+    googleLogin
   };
 
-  return <AuthContext.Provider value={contextValue}>{children}</AuthContext.Provider>;
+  console.log('🔐 AuthProvider State:', { user, loading });
+
+  return (
+    <AuthContext.Provider value={contextValue}>
+      {children}
+    </AuthContext.Provider>
+  );
 };
 
 export default AuthProvider;
