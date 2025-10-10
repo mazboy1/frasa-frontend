@@ -25,7 +25,7 @@ const MyClasses = () => {
 
         // ✅ COBA ENDPOINT BARU PERTAMA
         try {
-          const response = await axiosSecure.get(`/api/instructor/classes?email=${currentUser.email}`);
+          const response = await axiosSecure.get(`/instructor/classes?email=${currentUser.email}`);
           console.log('✅ New endpoint response:', response.data);
           
           if (response.data.success) {
@@ -38,7 +38,7 @@ const MyClasses = () => {
           console.log('❌ New endpoint failed, trying old endpoint...');
           
           // ✅ FALLBACK KE ENDPOINT LAMA
-          const fallbackResponse = await axiosSecure.get(`/api/classes/${currentUser.email}`);
+          const fallbackResponse = await axiosSecure.get(`/classes/${currentUser.email}`);
           console.log('✅ Old endpoint response:', fallbackResponse.data);
           
           setClasses(fallbackResponse.data || []);
