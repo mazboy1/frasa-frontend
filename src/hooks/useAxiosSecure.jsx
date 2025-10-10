@@ -1,115 +1,59 @@
-{
-
-  // import React, { useContext, useEffect } from 'react'
-  // import {AuthContext} from "../utilities/providers/AuthProvider"
-  // import {useNavigate} from "react-router-dom"
-  // import axios from 'axios';
-  
-  // const useAxiosSecure = () => {
-  //   const {logout} = useContext(AuthContext);
-  //   const navigate = useNavigate();
-  
-  //   const axiosSecure = axios.create({
-  //   baseURL: 'https://frasa-backend.vercel.app/api/'  
-  // });
-  
-  // useEffect(() => {
-  //   const requestInterceptor = axiosSecure.interceptors.request.use((config)  => {
-  //     const token = localStorage.getItem('token');
-  //     if(token) {
-  //       config.headers.Authorization = `Bearer ${token}`;
-  //     }
-  //     return config
-  //   })
-  
-  //   // respon interceptors
-  //   const responseInterceptor = axiosSecure.interceptors.response.use((response) => response, async(error) => {
-  //     if(error.response && (error.response.status === 401 || error.response.status === 403)) {
-  //       await logout();
-  //       navigate('/login');
-  //       throw error;
-  //     }
-  //     throw error
-  //   })
-  
-  //   return () => {
-  //     axiosSecure.interceptors.request.eject(requestInterceptor);
-  //     axiosSecure.interceptors.response.eject(responseInterceptor);
-  
-  //   }
-  // }, [logout, navigate, axiosSecure])
-  
-  //   return axiosSecure;  
-  // }
-  
-  // export default useAxiosSecure
-  // import { useContext } from 'react';
-  // import { AuthContext } from "../utilities/providers/AuthProvider";
-  // import { useNavigate } from "react-router-dom";
-  // import axios from 'axios';
-  
-  // const useAxiosSecure = () => {
-  //   const { logout } = useContext(AuthContext);
-  //   const navigate = useNavigate();
-  
-  //   const axiosSecure = axios.create({
-  //     baseURL: 'https://frasa-backend.vercel.app',
-  //     // withCredentials: true // Jika menggunakan cookies
-  //   });
-  
-  //   // Request interceptor
-  //   axiosSecure.interceptors.request.use((config) => {
-  //     const token = localStorage.getItem('token');
-  //     if (token) {
-  //       config.headers.Authorization = `Bearer ${token}`; // Perbaikan typo "Baerer" -> "Bearer"
-  //     }
-  //     return config;
-  //   }, (error) => {
-  //     return Promise.reject(error);
-  //   });
-  
-  //   // Response interceptor
-  //   axiosSecure.interceptors.response.use(
-  //     (response) => response,
-  //     async (error) => {
-  //       if (error.response && (error.response.status === 401 || error.response.status === 403)) {
-  //         await logout();
-  //         localStorage.removeItem('token'); // Bersihkan token yang sudah tidak valid
-  //         navigate('/login');
-  //       }
-  //       return Promise.reject(error);
-  //     }
-  //   );
-  
-  //   return axiosSecure;
-  // };
-  
-  // export default useAxiosSecure;
-}
-
+// hooks/useAxiosSecure.js - FINAL FIXED VERSION
 import { useEffect } from 'react';
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 
 const useAxiosSecure = () => {
+  const navigate = useNavigate();
+  
   const axiosSecure = axios.create({
-    baseURL: 'https://frasa-backend.vercel.app/api',
+    baseURL: 'https://frasa-backend.vercel.app',
   });
 
   useEffect(() => {
+    // ✅ REQUEST INTERCEPTOR - HANDLE ALL TOKEN VARIATIONS
     axiosSecure.interceptors.request.use((config) => {
-      const token = localStorage.getItem('access-token');
+      // ✅ CHECK ALL POSSIBLE TOKEN NAMES
+      const token = localStorage.getItem('token') || 
+                   localStorage.getItem('access-token');
+      
+      console.log('🔐 Axios Interceptor - Token found:', !!token);
+      
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
+        console.log('✅ Token added to request headers');
+      } else {
+        console.warn('⚠️ No token found in localStorage');
+        // Don't redirect here, let the response interceptor handle it
       }
+      
       return config;
-    }, (error) => Promise.reject(error));
-  }, [axiosSecure]);
+    }, (error) => {
+      console.error('❌ Request interceptor error:', error);
+      return Promise.reject(error);
+    });
+
+    // ✅ RESPONSE INTERCEPTOR - HANDLE AUTH ERRORS
+    axiosSecure.interceptors.response.use(
+      (response) => {
+        return response;
+      },
+      (error) => {
+        console.error('❌ Response error:', error.response?.status);
+        
+        if (error.response?.status === 401 || error.response?.status === 403) {
+          console.log('🔐 Authentication failed, redirecting to login...');
+          // Clear all tokens
+          localStorage.removeItem('token');
+          localStorage.removeItem('access-token');
+          navigate('/login');
+        }
+        return Promise.reject(error);
+      }
+    );
+  }, [axiosSecure, navigate]);
 
   return axiosSecure;
 }
 
 export default useAxiosSecure;
-
-
-
-
