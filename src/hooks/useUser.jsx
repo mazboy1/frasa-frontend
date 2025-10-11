@@ -1,52 +1,68 @@
-// hooks/useUser.js - FINAL FIXED VERSION
-import { useQuery } from '@tanstack/react-query';
-import useAxiosSecure from "./useAxiosSecure";
-import useAuth from './useAuth';
+import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 
-const useUser = () => {
-    const { user, loading } = useAuth();
-    const axiosSecure = useAxiosSecure();
-    
-    const { 
-        data: currentUser, 
-        isLoading, 
-        error,
-        refetch 
-    } = useQuery({
-        queryKey: ['user', user?.email],
-        queryFn: async () => {
-            console.log('🔄 Fetching user data for:', user?.email);
-            
-            if (!user?.email) {
-                throw new Error('No user email available');
-            }
-            
-            const res = await axiosSecure.get(`/user/${user?.email}`);
-            console.log('✅ User API Response:', res.data);
-            return res.data;
-        },
-        enabled: !!user?.email && !loading, // ✅ Wait for auth to be ready
-        retry: 2,
-        staleTime: 5 * 60 * 1000,
-    });
+const useAxiosSecure = () => {
+  const navigate = useNavigate();
 
-    // ✅ COMPREHENSIVE DEBUG LOGS
-    console.log('🔍 useUser Hook Debug:');
-    console.log('Auth User:', user);
-    console.log('Auth Loading:', loading);
-    console.log('API User Data:', currentUser);
-    console.log('Query Loading:', isLoading);
-    console.log('Error:', error);
-    console.log('Final Role:', currentUser?.role);
-    console.log('Token exists:', !!localStorage.getItem('token'));
-    console.log('-------------------');
+  const axiosSecure = axios.create({
+    baseURL: 'https://frasa-backend.vercel.app/api',
+    timeout: 10000,
+  });
 
-    return { 
-        currentUser, 
-        isLoading: isLoading || loading, // ✅ Combine both loading states
-        error, 
-        refetch 
-    };
-}
+  // ✅ INTERCEPTOR UNTUK REQUEST
+  axiosSecure.interceptors.request.use(
+    (config) => {
+      const token = localStorage.getItem('token');
+      console.log('🔐 Axios Request Interceptor - Token:', token);
+      
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+      
+      console.log('🚀 Request Config:', {
+        url: config.url,
+        headers: config.headers
+      });
+      
+      return config;
+    },
+    (error) => {
+      return Promise.reject(error);
+    }
+  );
 
-export default useUser;
+  // ✅ INTERCEPTOR UNTUK RESPONSE
+  axiosSecure.interceptors.response.use(
+    (response) => {
+      console.log('✅ Response Success:', response.status, response.config.url);
+      return response;
+    },
+    (error) => {
+      console.error('❌ Response Error:', {
+        status: error.response?.status,
+        url: error.config?.url,
+        message: error.message
+      });
+
+      // ✅ HANDLE 403 FORBIDDEN
+      if (error.response?.status === 403) {
+        console.log('🚫 403 Forbidden - Redirecting to login');
+        localStorage.removeItem('token');
+        navigate('/login');
+      }
+
+      // ✅ HANDLE 401 UNAUTHORIZED
+      if (error.response?.status === 401) {
+        console.log('🔐 401 Unauthorized - Token invalid');
+        localStorage.removeItem('token');
+        navigate('/login');
+      }
+
+      return Promise.reject(error);
+    }
+  );
+
+  return axiosSecure;
+};
+
+export default useAxiosSecure;
