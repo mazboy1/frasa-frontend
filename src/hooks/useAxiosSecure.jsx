@@ -1,66 +1,49 @@
+// hooks/useAxiosSecure.js - FINAL FIXED VERSION
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
+import { useEffect } from 'react';
 
 const useAxiosSecure = () => {
-  const navigate = useNavigate();
-
   const axiosSecure = axios.create({
-    baseURL: 'https://frasa-backend.vercel.app/api',
-    timeout: 10000,
+    baseURL: 'https://frasa-backend.vercel.app',
   });
 
-  // ✅ INTERCEPTOR UNTUK REQUEST
-  axiosSecure.interceptors.request.use(
-    (config) => {
-      const token = localStorage.getItem('token');
-      console.log('🔐 Axios Request Interceptor - Token:', token);
-      
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
+  useEffect(() => {
+    // ✅ REQUEST INTERCEPTOR - FIXED
+    const requestInterceptor = axiosSecure.interceptors.request.use(
+      (config) => {
+        // ✅ GET ACTIVE TOKEN
+        const token = localStorage.getItem('token') || localStorage.getItem('access-token');
+        
+        if (token) {
+          config.headers.Authorization = `Bearer ${token}`;
+          console.log('🔐 Auth header added to:', config.url);
+        }
+
+        return config;
+      },
+      (error) => {
+        return Promise.reject(error);
       }
-      
-      console.log('🚀 Request Config:', {
-        url: config.url,
-        headers: config.headers
-      });
-      
-      return config;
-    },
-    (error) => {
-      return Promise.reject(error);
-    }
-  );
+    );
 
-  // ✅ INTERCEPTOR UNTUK RESPONSE
-  axiosSecure.interceptors.response.use(
-    (response) => {
-      console.log('✅ Response Success:', response.status, response.config.url);
-      return response;
-    },
-    (error) => {
-      console.error('❌ Response Error:', {
-        status: error.response?.status,
-        url: error.config?.url,
-        message: error.message
-      });
-
-      // ✅ HANDLE 403 FORBIDDEN
-      if (error.response?.status === 403) {
-        console.log('🚫 403 Forbidden - Redirecting to login');
-        localStorage.removeItem('token');
-        navigate('/login');
+    // ✅ RESPONSE INTERCEPTOR - FIXED
+    const responseInterceptor = axiosSecure.interceptors.response.use(
+      (response) => response,
+      (error) => {
+        if (error.response?.status === 403) {
+          console.error('🚨 403 Forbidden - Clearing invalid tokens');
+          localStorage.removeItem('token');
+          localStorage.removeItem('access-token');
+        }
+        return Promise.reject(error);
       }
+    );
 
-      // ✅ HANDLE 401 UNAUTHORIZED
-      if (error.response?.status === 401) {
-        console.log('🔐 401 Unauthorized - Token invalid');
-        localStorage.removeItem('token');
-        navigate('/login');
-      }
-
-      return Promise.reject(error);
-    }
-  );
+    return () => {
+      axiosSecure.interceptors.request.eject(requestInterceptor);
+      axiosSecure.interceptors.response.eject(responseInterceptor);
+    };
+  }, [axiosSecure]);
 
   return axiosSecure;
 };
