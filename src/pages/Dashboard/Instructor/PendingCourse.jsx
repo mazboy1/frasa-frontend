@@ -1,4 +1,4 @@
-// components/PendingCourse.jsx - FINAL FIXED VERSION
+// components/PendingCourse.jsx - FINAL COMPLETE FIXED VERSION
 import React, { useEffect, useState } from 'react';
 import useAxiosSecure from '../../../hooks/useAxiosSecure';
 import useUser from '../../../hooks/useUser';
@@ -8,6 +8,7 @@ const PendingCourse = () => {
   const [pendingClasses, setPendingClasses] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [retryCount, setRetryCount] = useState(0);
   const { currentUser } = useUser();
   const axiosSecure = useAxiosSecure();
   const navigate = useNavigate();
@@ -31,7 +32,7 @@ const PendingCourse = () => {
         console.log('✅ PendingCourse - API Response:', response.data);
         
         if (response.data.success) {
-          setPendingClasses(response.data.classes || []);
+          setPendingClasses(response.data.data.classes || []);
           setError(null);
         } else {
           setError(response.data.message || 'Failed to fetch pending classes');
@@ -41,11 +42,24 @@ const PendingCourse = () => {
         console.error('❌ PendingCourse - Fetch error:', error);
         
         let errorMessage = 'Failed to load pending classes';
-        if (error.response?.data?.message) {
+        if (error.response?.status === 403) {
+          errorMessage = 'Access denied. Please login again.';
+        } else if (error.response?.status === 401) {
+          errorMessage = 'Session expired. Please login again.';
+        } else if (error.response?.data?.message) {
           errorMessage = error.response.data.message;
+        } else if (error.message) {
+          errorMessage = error.message;
         }
         
         setError(errorMessage);
+        
+        // Auto-retry
+        if (retryCount < 2) {
+          setTimeout(() => {
+            setRetryCount(prev => prev + 1);
+          }, 2000);
+        }
       } finally {
         setIsLoading(false);
       }
@@ -57,10 +71,18 @@ const PendingCourse = () => {
       setIsLoading(false);
       setError('User not authenticated');
     }
-  }, [currentUser, axiosSecure]);
+  }, [currentUser, axiosSecure, retryCount]);
 
   const handleRetry = () => {
-    window.location.reload();
+    setRetryCount(0);
+    setIsLoading(true);
+    setError(null);
+  };
+
+  const handleReLogin = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('access-token');
+    navigate('/login');
   };
 
   const handleAddClass = () => {
@@ -73,6 +95,9 @@ const PendingCourse = () => {
         <div className="text-center">
           <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-orange-500 mx-auto mb-4"></div>
           <p className="text-gray-600 text-lg">Loading pending classes...</p>
+          {retryCount > 0 && (
+            <p className="text-sm text-gray-500 mt-2">Retrying... ({retryCount}/2)</p>
+          )}
         </div>
       </div>
     );
@@ -94,8 +119,14 @@ const PendingCourse = () => {
               🔄 Try Again
             </button>
             <button
-              onClick={handleAddClass}
+              onClick={handleReLogin}
               className="bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 rounded-lg transition duration-200"
+            >
+              🔑 Login Again
+            </button>
+            <button
+              onClick={handleAddClass}
+              className="bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 px-6 rounded-lg transition duration-200"
             >
               ➕ Add New Class
             </button>

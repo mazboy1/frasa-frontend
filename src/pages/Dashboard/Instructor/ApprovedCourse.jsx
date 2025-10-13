@@ -1,4 +1,4 @@
-// components/ApprovedCourse.jsx - FINAL FIXED VERSION
+// components/ApprovedCourse.jsx - FINAL COMPLETE FIXED VERSION
 import React, { useEffect, useState } from 'react';
 import useAxiosSecure from '../../../hooks/useAxiosSecure';
 import useUser from '../../../hooks/useUser';
@@ -8,6 +8,7 @@ const ApprovedCourse = () => {
   const [approvedClasses, setApprovedClasses] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [retryCount, setRetryCount] = useState(0);
   const { currentUser } = useUser();
   const axiosSecure = useAxiosSecure();
   const navigate = useNavigate();
@@ -31,7 +32,7 @@ const ApprovedCourse = () => {
         console.log('✅ ApprovedCourse - API Response:', response.data);
         
         if (response.data.success) {
-          setApprovedClasses(response.data.classes || []);
+          setApprovedClasses(response.data.data.classes || []);
           setError(null);
         } else {
           setError(response.data.message || 'Failed to fetch approved classes');
@@ -41,11 +42,24 @@ const ApprovedCourse = () => {
         console.error('❌ ApprovedCourse - Fetch error:', error);
         
         let errorMessage = 'Failed to load approved classes';
-        if (error.response?.data?.message) {
+        if (error.response?.status === 403) {
+          errorMessage = 'Access denied. Please login again.';
+        } else if (error.response?.status === 401) {
+          errorMessage = 'Session expired. Please login again.';
+        } else if (error.response?.data?.message) {
           errorMessage = error.response.data.message;
+        } else if (error.message) {
+          errorMessage = error.message;
         }
         
         setError(errorMessage);
+        
+        // Auto-retry
+        if (retryCount < 2) {
+          setTimeout(() => {
+            setRetryCount(prev => prev + 1);
+          }, 2000);
+        }
       } finally {
         setIsLoading(false);
       }
@@ -57,17 +71,25 @@ const ApprovedCourse = () => {
       setIsLoading(false);
       setError('User not authenticated');
     }
-  }, [currentUser, axiosSecure]);
+  }, [currentUser, axiosSecure, retryCount]);
 
   const handleRetry = () => {
-    window.location.reload();
+    setRetryCount(0);
+    setIsLoading(true);
+    setError(null);
+  };
+
+  const handleReLogin = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('access-token');
+    navigate('/login');
   };
 
   const handleAddClass = () => {
     navigate('/dashboard/add-class');
   };
 
-  // Hitung total students
+  // Hitung total students dan revenue
   const totalStudents = approvedClasses.reduce((total, cls) => total + (cls.totalEnrolled || 0), 0);
   const totalRevenue = approvedClasses.reduce((total, cls) => total + (cls.price * (cls.totalEnrolled || 0)), 0);
 
@@ -77,6 +99,9 @@ const ApprovedCourse = () => {
         <div className="text-center">
           <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-green-500 mx-auto mb-4"></div>
           <p className="text-gray-600 text-lg">Loading approved classes...</p>
+          {retryCount > 0 && (
+            <p className="text-sm text-gray-500 mt-2">Retrying... ({retryCount}/2)</p>
+          )}
         </div>
       </div>
     );
@@ -96,6 +121,12 @@ const ApprovedCourse = () => {
               className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-lg transition duration-200"
             >
               🔄 Try Again
+            </button>
+            <button
+              onClick={handleReLogin}
+              className="bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 rounded-lg transition duration-200"
+            >
+              🔑 Login Again
             </button>
             <button
               onClick={handleAddClass}

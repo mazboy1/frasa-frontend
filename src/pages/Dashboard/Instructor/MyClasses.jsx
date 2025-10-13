@@ -1,4 +1,4 @@
-// components/MyClasses.jsx - FINAL FIXED VERSION
+// components/MyClasses.jsx - FINAL COMPLETE FIXED VERSION
 import React, { useEffect, useState } from 'react';
 import useUser from '../../../hooks/useUser';
 import { useNavigate } from 'react-router-dom';
@@ -8,6 +8,8 @@ const MyClasses = () => {
   const [classes, setClasses] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [retryCount, setRetryCount] = useState(0);
+  const [debugInfo, setDebugInfo] = useState({});
   const { currentUser } = useUser();
   const navigate = useNavigate();
   const axiosSecure = useAxiosSecure();
@@ -15,7 +17,8 @@ const MyClasses = () => {
   useEffect(() => {
     const fetchClasses = async () => {
       try {
-        console.log('🔄 MyClasses - Starting fetch for:', currentUser?.email);
+        console.log('🔄 MyClasses - Starting fetch attempt:', retryCount + 1);
+        console.log('🔄 Current user:', currentUser);
         
         if (!currentUser?.email) {
           setError('User email not available');
@@ -23,35 +26,97 @@ const MyClasses = () => {
           return;
         }
 
-        // ✅ GUNAKAN ENDPOINT BARU YANG FIXED
-        const response = await axiosSecure.get('/api/instructor/my-classes', {
-          params: { email: currentUser.email }
+        // Update debug info
+        setDebugInfo({
+          userEmail: currentUser.email,
+          userRole: currentUser.role,
+          token: localStorage.getItem('token') ? 'Exists' : 'Missing',
+          accessToken: localStorage.getItem('access-token') ? 'Exists' : 'Missing',
+          timestamp: new Date().toISOString()
         });
-        
-        console.log('✅ MyClasses - API Response:', response.data);
-        
-        if (response.data.success) {
-          setClasses(response.data.classes || []);
-          setError(null);
-        } else {
-          setError(response.data.message || 'Failed to fetch classes');
+
+        // ✅ STRATEGY 1: COBA ENDPOINT BARU DULU (WITH AUTH)
+        try {
+          console.log('🔄 Strategy 1: Trying new endpoint with auth...');
+          const response = await axiosSecure.get('/api/instructor/my-classes', {
+            params: { email: currentUser.email }
+          });
+          
+          console.log('✅ Strategy 1 SUCCESS:', response.data);
+          
+          if (response.data.success) {
+            setClasses(response.data.data.classes || []);
+            setError(null);
+            setIsLoading(false);
+            return;
+          } else {
+            throw new Error(response.data.message || 'API returned unsuccessful');
+          }
+        } catch (newEndpointError) {
+          console.log('❌ Strategy 1 FAILED:', newEndpointError.message);
+        }
+
+        // ✅ STRATEGY 2: COBA ENDPOINT LAMA (WITH AUTH)
+        try {
+          console.log('🔄 Strategy 2: Trying old endpoint with auth...');
+          const fallbackResponse = await axiosSecure.get(`/api/classes/${currentUser.email}`);
+          console.log('✅ Strategy 2 SUCCESS:', fallbackResponse.data);
+          
+          if (fallbackResponse.data.success) {
+            setClasses(fallbackResponse.data.data || []);
+            setError(null);
+          } else {
+            setClasses(fallbackResponse.data.data || []);
+            setError(null);
+          }
+        } catch (fallbackError) {
+          console.log('❌ Strategy 2 FAILED:', fallbackError.message);
+          throw fallbackError;
         }
         
       } catch (error) {
-        console.error('❌ MyClasses - Fetch error:', error);
+        console.error('❌ MyClasses - All auth endpoints failed:', error);
         
         let errorMessage = 'Failed to load classes';
+        let errorType = 'unknown';
+        
         if (error.response?.status === 403) {
-          errorMessage = 'Access denied. Please login again.';
+          errorMessage = 'Access denied. Your session may have expired or you don\'t have permission.';
+          errorType = 'forbidden';
         } else if (error.response?.status === 401) {
-          errorMessage = 'Session expired. Please login again.';
+          errorMessage = 'Please login again to continue.';
+          errorType = 'unauthorized';
+        } else if (error.response?.status === 404) {
+          errorMessage = 'Classes not found for your account.';
+          errorType = 'not_found';
         } else if (error.response?.data?.message) {
           errorMessage = error.response.data.message;
+          errorType = 'api_error';
         } else if (error.message) {
           errorMessage = error.message;
+          errorType = 'network_error';
         }
         
         setError(errorMessage);
+        
+        // Update debug info with error
+        setDebugInfo(prev => ({
+          ...prev,
+          error: errorMessage,
+          errorType: errorType,
+          errorStatus: error.response?.status,
+          lastAttempt: new Date().toISOString()
+        }));
+
+        // Auto-retry logic (max 2 retries)
+        if (retryCount < 2) {
+          console.log(`🔄 Auto-retrying in 2 seconds... (${retryCount + 1}/2)`);
+          setTimeout(() => {
+            setRetryCount(prev => prev + 1);
+          }, 2000);
+        } else {
+          console.log('❌ Max retries reached');
+        }
       } finally {
         setIsLoading(false);
       }
@@ -62,15 +127,63 @@ const MyClasses = () => {
     } else {
       setIsLoading(false);
       setError('User not authenticated');
+      setDebugInfo({
+        error: 'No user data',
+        timestamp: new Date().toISOString()
+      });
     }
-  }, [currentUser, axiosSecure]);
+  }, [currentUser, axiosSecure, retryCount]);
 
   const handleRetry = () => {
-    window.location.reload();
+    setRetryCount(0);
+    setIsLoading(true);
+    setError(null);
+  };
+
+  const handleReLogin = () => {
+    // Clear semua token
+    localStorage.removeItem('token');
+    localStorage.removeItem('access-token');
+    sessionStorage.removeItem('token');
+    
+    // Redirect ke login
+    navigate('/login', { 
+      state: { 
+        from: '/dashboard/my-classes',
+        message: 'Please login again to access your classes.'
+      }
+    });
+  };
+
+  const handleDebug = () => {
+    console.log('🔍 DEBUG INFORMATION:');
+    console.log('User:', currentUser);
+    console.log('Token:', localStorage.getItem('token'));
+    console.log('Access Token:', localStorage.getItem('access-token'));
+    console.log('Retry Count:', retryCount);
+    console.log('Debug Info:', debugInfo);
+    
+    // Test endpoint langsung
+    fetch('https://frasa-backend.vercel.app/api/test/instructor-classes/' + currentUser.email)
+      .then(res => res.json())
+      .then(data => console.log('🔍 Test endpoint result:', data))
+      .catch(err => console.error('🔍 Test endpoint error:', err));
   };
 
   const handleAddClass = () => {
     navigate('/dashboard/add-class');
+  };
+
+  const handleTestAuth = async () => {
+    try {
+      console.log('🔐 Testing authentication...');
+      const response = await axiosSecure.get('/api/test-auth');
+      console.log('✅ Auth test successful:', response.data);
+      alert('Authentication is working!');
+    } catch (error) {
+      console.error('❌ Auth test failed:', error);
+      alert('Authentication failed: ' + error.message);
+    }
   };
 
   // Hitung statistik
@@ -87,6 +200,10 @@ const MyClasses = () => {
         <div className="text-center">
           <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-500 mx-auto mb-4"></div>
           <p className="text-gray-600 text-lg">Loading your classes...</p>
+          {retryCount > 0 && (
+            <p className="text-sm text-gray-500 mt-2">Retry attempt {retryCount} of 2</p>
+          )}
+          <p className="text-xs text-gray-400 mt-1">User: {currentUser?.email}</p>
         </div>
       </div>
     );
@@ -95,12 +212,15 @@ const MyClasses = () => {
   if (error) {
     return (
       <div className="container mx-auto px-4 py-8">
-        <div className="max-w-2xl mx-auto text-center py-16 bg-red-50 rounded-lg border border-red-200">
-          <div className="text-6xl mb-4">❌</div>
-          <h2 className="text-2xl font-bold text-red-600 mb-4">Error Loading Classes</h2>
+        <div className="max-w-4xl mx-auto text-center py-16 bg-red-50 rounded-lg border border-red-200">
+          <div className="text-6xl mb-4">🔐</div>
+          <h2 className="text-2xl font-bold text-red-600 mb-4">Unable to Load Classes</h2>
           <p className="text-red-500 mb-2 font-medium">{error}</p>
+          <p className="text-gray-600 mb-6">
+            We encountered an issue while loading your classes. This might be due to authentication issues.
+          </p>
           
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          <div className="flex flex-col sm:flex-row gap-4 justify-center mb-6">
             <button
               onClick={handleRetry}
               className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-lg transition duration-200"
@@ -108,12 +228,37 @@ const MyClasses = () => {
               🔄 Try Again
             </button>
             <button
-              onClick={() => navigate('/dashboard/add-class')}
+              onClick={handleReLogin}
               className="bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 rounded-lg transition duration-200"
             >
-              ➕ Add New Class
+              🔑 Login Again
+            </button>
+            <button
+              onClick={handleTestAuth}
+              className="bg-purple-500 hover:bg-purple-600 text-white font-bold py-3 px-6 rounded-lg transition duration-200"
+            >
+              🧪 Test Auth
             </button>
           </div>
+
+          <div className="bg-white p-4 rounded border text-sm text-left mb-4">
+            <p className="font-bold mb-2">Debug Information:</p>
+            <div className="grid grid-cols-2 gap-2">
+              <p><strong>Email:</strong> {currentUser?.email}</p>
+              <p><strong>Role:</strong> {currentUser?.role}</p>
+              <p><strong>Token:</strong> {localStorage.getItem('token') ? 'Exists' : 'Missing'}</p>
+              <p><strong>Access Token:</strong> {localStorage.getItem('access-token') ? 'Exists' : 'Missing'}</p>
+              <p><strong>Retry Count:</strong> {retryCount}</p>
+              <p><strong>Error Type:</strong> {debugInfo.errorType}</p>
+            </div>
+          </div>
+
+          <button
+            onClick={handleDebug}
+            className="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded transition duration-200 text-sm"
+          >
+            🐛 Show Detailed Debug
+          </button>
         </div>
       </div>
     );
@@ -128,6 +273,9 @@ const MyClasses = () => {
         </h1>
         <p className="text-gray-600 mt-2">
           Manage all your created classes
+        </p>
+        <p className="text-sm text-gray-400 mt-1">
+          Instructor: {currentUser?.name} ({currentUser?.email})
         </p>
       </div>
 
@@ -187,18 +335,29 @@ const MyClasses = () => {
         <div className="flex flex-col sm:flex-row justify-between items-center">
           <div>
             <p className="text-blue-700 font-medium">
-              Instructor: <span className="font-bold">{currentUser?.name}</span>
+              Welcome back, <span className="font-bold">{currentUser?.name}</span>
             </p>
             <p className="text-sm text-blue-600">
-              Email: {currentUser?.email}
+              {stats.total > 0 
+                ? `You have ${stats.total} classes in total` 
+                : 'Create your first class to get started'
+              }
             </p>
           </div>
-          <button
-            onClick={handleAddClass}
-            className="mt-2 sm:mt-0 bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-6 rounded transition duration-200 flex items-center"
-          >
-            <span className="mr-2">+</span> Add New Class
-          </button>
+          <div className="flex gap-2 mt-2 sm:mt-0">
+            <button
+              onClick={handleAddClass}
+              className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-6 rounded transition duration-200 flex items-center"
+            >
+              <span className="mr-2">+</span> Add New Class
+            </button>
+            <button
+              onClick={handleTestAuth}
+              className="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded transition duration-200 text-sm"
+            >
+              Test Auth
+            </button>
+          </div>
         </div>
       </div>
 
@@ -330,6 +489,11 @@ const MyClasses = () => {
           ))}
         </div>
       )}
+
+      {/* Debug Footer */}
+      <div className="mt-8 p-4 bg-gray-100 rounded-lg text-xs text-gray-600">
+        <p><strong>Debug Info:</strong> Loaded {classes.length} classes | User: {currentUser?.email} | Retries: {retryCount}</p>
+      </div>
     </div>
   );
 };
