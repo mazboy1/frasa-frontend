@@ -1,5 +1,6 @@
+// components/SingleClass.jsx - FIXED VERSION
 import React, { useState, useEffect } from 'react';
-import { useLoaderData, useNavigate } from 'react-router-dom';
+import { useLoaderData, useNavigate, useParams } from 'react-router-dom';
 import useUser from '../../hooks/useUser';
 import useAxiosSecure from '../../hooks/useAxiosSecure';
 import { FaLevelUpAlt, FaUsers, FaClock, FaMoneyBillWave, FaChalkboardTeacher } from 'react-icons/fa';
@@ -8,29 +9,106 @@ import { MdPlayLesson, MdOutlineVideoLibrary } from 'react-icons/md';
 import Swal from 'sweetalert2';
 
 const SingleClass = () => {
-  const course = useLoaderData();
+  const loaderData = useLoaderData();
+  const { id } = useParams();
   const { currentUser } = useUser();
   const role = currentUser?.role;
   const [enrolledClasses, setEnrolledClasses] = useState([]);
   const [isEnrolling, setIsEnrolling] = useState(false);
+  const [course, setCourse] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const axiosSecure = useAxiosSecure();
   const navigate = useNavigate();
 
+  // ✅ HANDLE LOADER DATA DENGAN AMAN
   useEffect(() => {
-    if (currentUser?.email) {
-      axiosSecure.get(`/enrolled-classes/${currentUser.email}`)
-        .then(res => setEnrolledClasses(res.data))
-        .catch(err => console.error('Error fetching enrolled classes:', err));
-    }
-  }, [currentUser?.email, axiosSecure]);
+    const initializeData = async () => {
+      try {
+        console.log('🔍 SingleClass loader data:', loaderData);
+        
+        // Cek jika loader mengembalikan error
+        if (loaderData?.success === false) {
+          setError(loaderData.error || 'Failed to load class data');
+          setLoading(false);
+          return;
+        }
+
+        // Handle berbagai format response
+        let courseData = null;
+        
+        if (loaderData?.data) {
+          // Format: { success: true, data: {...} }
+          courseData = loaderData.data;
+        } else if (loaderData && typeof loaderData === 'object') {
+          // Format langsung object
+          courseData = loaderData;
+        }
+
+        console.log('✅ Processed course data:', courseData);
+
+        if (!courseData) {
+          throw new Error('No class data available');
+        }
+
+        // Validasi data penting
+        if (!courseData._id || !courseData.name) {
+          console.warn('⚠️ Incomplete course data:', courseData);
+        }
+
+        setCourse(courseData);
+        setError(null);
+
+        // Load enrolled classes jika user login
+        if (currentUser?.email) {
+          try {
+            const enrollmentResponse = await axiosSecure.get(`/enrolled-classes/${currentUser.email}`);
+            if (enrollmentResponse.data?.success) {
+              setEnrolledClasses(enrollmentResponse.data.data || []);
+            } else {
+              setEnrolledClasses(enrollmentResponse.data || []);
+            }
+          } catch (enrollError) {
+            console.error('Error fetching enrolled classes:', enrollError);
+            setEnrolledClasses([]);
+          }
+        }
+
+      } catch (err) {
+        console.error('❌ Error initializing class data:', err);
+        setError(err.message || 'Failed to load class');
+        
+        // Fallback: coba fetch langsung
+        try {
+          console.log('🔄 Attempting direct fetch...');
+          const response = await fetch(`https://frasa-backend.vercel.app/api/class/${id}`);
+          if (response.ok) {
+            const directData = await response.json();
+            setCourse(directData.data || directData);
+            setError(null);
+          } else {
+            throw new Error('Direct fetch also failed');
+          }
+        } catch (fallbackError) {
+          console.error('❌ Fallback fetch failed:', fallbackError);
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    initializeData();
+  }, [loaderData, currentUser, axiosSecure, id]);
 
   // Cek apakah pengguna sudah terdaftar di kelas ini
   const isAlreadyEnrolled = enrolledClasses.some(
-    enrolledClass => enrolledClass.classes._id === course._id
+    enrolledClass => enrolledClass.classes?._id === course?._id
   );
 
   const getLevelColor = (level) => {
-    switch (level) {
+    if (!level) return 'bg-gray-100 text-gray-800 border border-gray-200';
+    
+    switch (level.toLowerCase()) {
       case 'pemula': return 'bg-green-100 text-green-800 border border-green-200';
       case 'menengah': return 'bg-yellow-100 text-yellow-800 border border-yellow-200';
       case 'mahir': return 'bg-red-100 text-red-800 border border-red-200';
@@ -40,7 +118,9 @@ const SingleClass = () => {
   };
 
   const getLevelText = (level) => {
-    switch (level) {
+    if (!level) return 'Tidak ditentukan';
+    
+    switch (level.toLowerCase()) {
       case 'pemula': return 'Pemula';
       case 'menengah': return 'Menengah';
       case 'mahir': return 'Mahir';
@@ -51,6 +131,11 @@ const SingleClass = () => {
 
   // Fungsi untuk menambahkan kelas ke keranjang
   const handleAddToCart = async (classId) => {
+    if (!classId) {
+      Swal.fire('Error', 'Invalid class ID', 'error');
+      return;
+    }
+
     // Validasi jika pengguna belum login
     if (!currentUser) {
       Swal.fire({
@@ -117,7 +202,7 @@ const SingleClass = () => {
         submitted: new Date()
       });
 
-      if (response.data.insertedId) {
+      if (response.data.insertedId || response.data.success) {
         Swal.fire({
           title: 'Berhasil!',
           text: 'Kelas telah ditambahkan ke keranjang',
@@ -154,12 +239,25 @@ const SingleClass = () => {
 
   // Fungsi untuk mengakses kelas yang sudah didaftar
   const handleAccessCourse = () => {
-    if (isAlreadyEnrolled) {
+    if (isAlreadyEnrolled && course) {
       navigate('/dashboard/courses-study', { state: { course } });
     }
   };
 
-  if (!course) {
+  // Helper function untuk extract YouTube ID
+  const extractYouTubeID = (url) => {
+    if (!url) return null;
+    try {
+      const regExp = /^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*/;
+      const match = url.match(regExp);
+      return (match && match[7].length === 11) ? match[7] : null;
+    } catch (error) {
+      console.error('Error extracting YouTube ID:', error);
+      return null;
+    }
+  };
+
+  if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -170,6 +268,46 @@ const SingleClass = () => {
     );
   }
 
+  if (error || !course) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-6xl mb-4">😵</div>
+          <h2 className="text-xl text-gray-800 mb-4">Kelas tidak dapat dimuat</h2>
+          <p className="text-gray-600 mb-6">{error || 'Data kelas tidak tersedia'}</p>
+          <div className="flex gap-4 justify-center">
+            <button 
+              onClick={() => window.location.reload()}
+              className="bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-6 rounded-lg transition-colors"
+            >
+              Coba Lagi
+            </button>
+            <button 
+              onClick={() => navigate('/classes')}
+              className="bg-gray-500 hover:bg-gray-600 text-white font-medium py-2 px-6 rounded-lg transition-colors"
+            >
+              Lihat Kelas Lain
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ✅ SAFE DATA ACCESS
+  const safeModules = Array.isArray(course.modules) ? course.modules : [];
+  const safeObjectives = Array.isArray(course.objectives) ? course.objectives : [];
+  const safeImage = course.image || 'https://via.placeholder.com/800x400?text=Gambar+Kelas';
+  const safeInstructorName = course.instructorName || 'Instruktur Tidak Diketahui';
+  const safeDescription = course.description || 'Tidak ada deskripsi yang tersedia untuk kursus ini.';
+  const safePrice = typeof course.price === 'number' ? course.price : 0;
+  const safeAvailableSeats = typeof course.availableSeats === 'number' ? course.availableSeats : 0;
+  const safeTotalEnrolled = typeof course.totalEnrolled === 'number' ? course.totalEnrolled : 0;
+  const safeLevel = course.level || 'Tidak ditentukan';
+  const safeCategory = course.category || 'Tidak dikategorikan';
+  const safeTotalDuration = course.totalDuration || 'Durasi tidak tersedia';
+  const safeTotalLessons = course.totalLessons || safeModules.reduce((total, module) => total + (Array.isArray(module.lessons) ? module.lessons.length : 0), 0);
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -179,19 +317,19 @@ const SingleClass = () => {
           <div className="flex flex-wrap justify-center gap-4 text-white">
             <span className="flex items-center">
               <FaChalkboardTeacher className="mr-2" />
-              {course.instructorName}
+              {safeInstructorName}
             </span>
             <span className="flex items-center">
               <FaClock className="mr-2" />
-              {course.totalDuration || course.duration}
+              {safeTotalDuration}
             </span>
             <span className="flex items-center">
               <MdOutlineVideoLibrary className="mr-2" />
-              {course.totalLessons || 0} Pelajaran
+              {safeTotalLessons} Pelajaran
             </span>
-            <span className={`flex items-center px-3 py-1 rounded-full ${getLevelColor(course.level)}`}>
+            <span className={`flex items-center px-3 py-1 rounded-full ${getLevelColor(safeLevel)}`}>
               <FaLevelUpAlt className="mr-2" />
-              {getLevelText(course.level)}
+              {getLevelText(safeLevel)}
             </span>
           </div>
         </div>
@@ -222,7 +360,7 @@ const SingleClass = () => {
 
             <div className="bg-white rounded-lg shadow-md p-6 mb-6">
               <img
-                src={course.image}
+                src={safeImage}
                 alt={course.name}
                 className="w-full h-64 object-cover rounded-lg mb-6"
                 onError={(e) => {
@@ -232,14 +370,14 @@ const SingleClass = () => {
               
               <h2 className="text-2xl font-bold mb-4">Deskripsi Kursus</h2>
               <p className="text-gray-700 mb-6 leading-relaxed">
-                {course.description || 'Tidak ada deskripsi yang tersedia untuk kursus ini.'}
+                {safeDescription}
               </p>
 
-              {course.objectives && course.objectives.length > 0 && (
+              {safeObjectives.length > 0 && (
                 <div className="bg-blue-50 rounded-lg p-6 mb-6">
                   <h3 className="text-xl font-semibold mb-4 text-secondary">🎯 Apa yang akan Anda pelajari?</h3>
                   <ul className="grid md:grid-cols-2 gap-3">
-                    {course.objectives.map((objective, index) => (
+                    {safeObjectives.map((objective, index) => (
                       <li key={index} className="flex items-start">
                         <span className="text-green-600 mr-2">✓</span>
                         <span>{objective}</span>
@@ -269,14 +407,17 @@ const SingleClass = () => {
           <div className="lg:col-span-1">
             <div className="bg-white rounded-lg shadow-md p-6 sticky top-6">
               <img
-                src={course.image}
+                src={safeImage}
                 alt={course.name}
                 className="w-full h-48 object-cover rounded-lg mb-4"
+                onError={(e) => {
+                  e.target.src = 'https://via.placeholder.com/400x300?text=Gambar+Kelas';
+                }}
               />
               
               <div className="text-center mb-4">
                 <span className="text-3xl font-bold text-green-700">
-                  Rp{course.price?.toLocaleString('id-ID')}
+                  Rp{safePrice.toLocaleString('id-ID')}
                 </span>
               </div>
 
@@ -295,7 +436,7 @@ const SingleClass = () => {
                 <button
                   onClick={() => handleAddToCart(course._id)}
                   disabled={role === 'admin' || role === 'instructor' || 
-                           course.availableSeats < 1 || isEnrolling}
+                           safeAvailableSeats < 1 || isEnrolling}
                   className="w-full bg-secondary hover:bg-primary disabled:bg-gray-400 text-white font-semibold py-3 px-4 rounded-lg transition duration-200 mb-4 flex items-center justify-center"
                 >
                   {isEnrolling ? (
@@ -305,7 +446,7 @@ const SingleClass = () => {
                     </>
                   ) : role === 'admin' || role === 'instructor' ? (
                     'Tidak Tersedia'
-                  ) : course.availableSeats < 1 ? (
+                  ) : safeAvailableSeats < 1 ? (
                     'Kelas Penuh'
                   ) : (
                     <>
@@ -324,7 +465,7 @@ const SingleClass = () => {
                     <FaChalkboardTeacher className="mr-2" />
                     Instruktur
                   </span>
-                  <span className="font-semibold">{course.instructorName}</span>
+                  <span className="font-semibold">{safeInstructorName}</span>
                 </div>
 
                 <div className="flex justify-between items-center py-2 border-b">
@@ -332,7 +473,7 @@ const SingleClass = () => {
                     <FaClock className="mr-2" />
                     Durasi
                   </span>
-                  <span className="font-semibold">{course.totalDuration || course.duration}</span>
+                  <span className="font-semibold">{safeTotalDuration}</span>
                 </div>
 
                 <div className="flex justify-between items-center py-2 border-b">
@@ -340,7 +481,7 @@ const SingleClass = () => {
                     <MdPlayLesson className="mr-2" />
                     Jumlah Pelajaran
                   </span>
-                  <span className="font-semibold">{course.totalLessons || 0}</span>
+                  <span className="font-semibold">{safeTotalLessons}</span>
                 </div>
 
                 <div className="flex justify-between items-center py-2 border-b">
@@ -348,8 +489,8 @@ const SingleClass = () => {
                     <FaLevelUpAlt className="mr-2" />
                     Tingkat
                   </span>
-                  <span className={`px-3 py-1 rounded-full text-sm font-semibold ${getLevelColor(course.level)}`}>
-                    {getLevelText(course.level)}
+                  <span className={`px-3 py-1 rounded-full text-sm font-semibold ${getLevelColor(safeLevel)}`}>
+                    {getLevelText(safeLevel)}
                   </span>
                 </div>
 
@@ -358,7 +499,7 @@ const SingleClass = () => {
                     <IoIosPeople className="mr-2" />
                     Terdaftar
                   </span>
-                  <span className="font-semibold">{course.totalEnrolled} peserta</span>
+                  <span className="font-semibold">{safeTotalEnrolled} peserta</span>
                 </div>
 
                 <div className="flex justify-between items-center py-2 border-b">
@@ -366,8 +507,8 @@ const SingleClass = () => {
                     <FaUsers className="mr-2" />
                     Kuota Tersedia
                   </span>
-                  <span className={`font-semibold ${course.availableSeats < 5 ? 'text-red-600' : 'text-green-600'}`}>
-                    {course.availableSeats} kursi
+                  <span className={`font-semibold ${safeAvailableSeats < 5 ? 'text-red-600' : 'text-green-600'}`}>
+                    {safeAvailableSeats} kursi
                   </span>
                 </div>
 
@@ -376,22 +517,22 @@ const SingleClass = () => {
                     <FaMoneyBillWave className="mr-2" />
                     Harga
                   </span>
-                  <span className="font-semibold">Rp{course.price?.toLocaleString('id-ID')}</span>
+                  <span className="font-semibold">Rp{safePrice.toLocaleString('id-ID')}</span>
                 </div>
               </div>
 
-              {/* Daftar Modul (hanya judul, tidak bisa diakses) */}
-              {course.modules && course.modules.length > 0 && (
+              {/* Daftar Modul */}
+              {safeModules.length > 0 && (
                 <div className="mt-6 pt-4 border-t">
                   <h4 className="font-semibold mb-3">📚 Kurikulum Kursus</h4>
                   <p className="text-sm text-gray-600 mb-3">Daftar modul yang akan dipelajari:</p>
                   <div className="space-y-2 max-h-80 overflow-y-auto">
-                    {course.modules.map((module, moduleIndex) => (
+                    {safeModules.map((module, moduleIndex) => (
                       <div key={moduleIndex} className="border rounded-lg">
                         <div className="p-3 bg-gray-50 font-medium">
-                          Modul {moduleIndex + 1}: {module.title}
+                          Modul {moduleIndex + 1}: {module.title || 'Untitled Module'}
                           <span className="text-xs text-gray-500 ml-2">
-                            ({module.lessons?.length || 0} pelajaran)
+                            ({(module.lessons && Array.isArray(module.lessons) ? module.lessons.length : 0)} pelajaran)
                           </span>
                         </div>
                       </div>
@@ -408,14 +549,6 @@ const SingleClass = () => {
       </div>
     </div>
   );
-};
-
-// Helper function untuk extract YouTube ID
-const extractYouTubeID = (url) => {
-  if (!url) return null;
-  const regExp = /^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*/;
-  const match = url.match(regExp);
-  return (match && match[7].length === 11) ? match[7] : null;
 };
 
 export default SingleClass;
