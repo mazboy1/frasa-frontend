@@ -1,4 +1,4 @@
-// hooks/useUser.js - COMPLETE REWRITE
+// src/hooks/useUser.js - SIMPLE FIXED VERSION
 import { useState, useEffect } from 'react';
 import useAuth from './useAuth';
 
@@ -6,65 +6,44 @@ const useUser = () => {
   const { user } = useAuth();
   const [currentUser, setCurrentUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
 
   useEffect(() => {
-    const initializeUser = () => {
+    const loadUser = async () => {
       try {
         setIsLoading(true);
         
-        // ✅ SAFETY CHECK: Pastikan user object valid
-        if (!user || typeof user !== 'object') {
-          console.log('⚠️ useUser: Invalid user object', user);
+        if (!user) {
           setCurrentUser(null);
-          setIsLoading(false);
           return;
         }
 
-        // ✅ SAFE DATA EXTRACTION - Hindari .slice() calls
-        const safeUserData = {
-          // ✅ Gunakan nullish coalescing untuk avoid undefined
-          _id: user?.uid || 'temp-id',
-          name: String(user?.displayName || 'Instructor'),
-          email: String(user?.email || ''),
-          role: 'instructor', // ✅ Hardcode untuk stability
-          photoUrl: String(user?.photoURL || '')
+        // Simple user data extraction
+        const userData = {
+          _id: user.uid,
+          name: user.displayName || 'User',
+          email: user.email,
+          role: 'user', // Default role
+          photoUrl: user.photoURL || ''
         };
 
-        console.log('✅ useUser - Safe data created:', safeUserData);
-        setCurrentUser(safeUserData);
-        setError(null);
-
-      } catch (err) {
-        console.error('❌ useUser initialization error:', err);
-        // ✅ FALLBACK: Return safe default data
-        setCurrentUser({
-          _id: 'fallback-id',
-          name: 'Instructor',
-          email: 'user@example.com',
-          role: 'instructor',
-          photoUrl: ''
-        });
-        setError('User data loading failed');
+        setCurrentUser(userData);
+        
+      } catch (error) {
+        console.error('Error in useUser:', error);
+        setCurrentUser(null);
       } finally {
         setIsLoading(false);
       }
     };
 
-    initializeUser();
-  }, [user]); // ✅ Hanya depend on user object
+    loadUser();
+  }, [user]);
 
-  // ✅ SAFE RETURN - Pastikan selalu return object yang konsisten
   return { 
     currentUser, 
     isLoading, 
-    error,
-    refetch: () => {
-      console.log('useUser refetch called');
-      // Simple refetch implementation
-      setIsLoading(true);
-      setTimeout(() => setIsLoading(false), 100);
-    }
+    error: null, 
+    refetch: () => console.log('refetch') 
   };
 };
 
