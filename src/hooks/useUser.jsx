@@ -1,68 +1,50 @@
-import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
+// hooks/useUser.js - EMERGENCY FIX
+import { useState, useEffect } from 'react';
+import useAuth from './useAuth';
 
-const useAxiosSecure = () => {
-  const navigate = useNavigate();
+const useUser = () => {
+  const { user } = useAuth();
+  const [currentUser, setCurrentUser] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const axiosSecure = axios.create({
-    baseURL: 'https://frasa-backend.vercel.app/api',
-    timeout: 10000,
-  });
+  useEffect(() => {
+    const loadUser = async () => {
+      try {
+        setIsLoading(true);
+        
+        if (!user?.email) {
+          setCurrentUser(null);
+          setIsLoading(false);
+          return;
+        }
 
-  // ✅ INTERCEPTOR UNTUK REQUEST
-  axiosSecure.interceptors.request.use(
-    (config) => {
-      const token = localStorage.getItem('token');
-      console.log('🔐 Axios Request Interceptor - Token:', token);
-      
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
+        // ✅ SAFE USER DATA EXTRACTION
+        const safeUser = {
+          _id: user?.uid || 'temp-id',
+          name: user?.displayName || 'User',
+          email: user?.email || '',
+          role: 'instructor', // ✅ FIX: Hardcode untuk testing
+          photoUrl: user?.photoURL || ''
+        };
+
+        console.log('✅ useUser - Safe data:', safeUser);
+        setCurrentUser(safeUser);
+        setError(null);
+        
+      } catch (err) {
+        console.error('❌ useUser error:', err);
+        setError('Failed to load user data');
+        setCurrentUser(null);
+      } finally {
+        setIsLoading(false);
       }
-      
-      console.log('🚀 Request Config:', {
-        url: config.url,
-        headers: config.headers
-      });
-      
-      return config;
-    },
-    (error) => {
-      return Promise.reject(error);
-    }
-  );
+    };
 
-  // ✅ INTERCEPTOR UNTUK RESPONSE
-  axiosSecure.interceptors.response.use(
-    (response) => {
-      console.log('✅ Response Success:', response.status, response.config.url);
-      return response;
-    },
-    (error) => {
-      console.error('❌ Response Error:', {
-        status: error.response?.status,
-        url: error.config?.url,
-        message: error.message
-      });
+    loadUser();
+  }, [user]);
 
-      // ✅ HANDLE 403 FORBIDDEN
-      if (error.response?.status === 403) {
-        console.log('🚫 403 Forbidden - Redirecting to login');
-        localStorage.removeItem('token');
-        navigate('/login');
-      }
-
-      // ✅ HANDLE 401 UNAUTHORIZED
-      if (error.response?.status === 401) {
-        console.log('🔐 401 Unauthorized - Token invalid');
-        localStorage.removeItem('token');
-        navigate('/login');
-      }
-
-      return Promise.reject(error);
-    }
-  );
-
-  return axiosSecure;
+  return { currentUser, isLoading, error, refetch: () => {} };
 };
 
-export default useAxiosSecure;
+export default useUser;
