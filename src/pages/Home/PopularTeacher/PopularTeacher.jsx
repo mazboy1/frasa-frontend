@@ -47,8 +47,8 @@ const PopularTeacher = () => {
                     <p className='text-red-500'>{error}</p>
                 </div>
             ) : instructors.length > 0 ? (
-                <div className=' grid mb-28 md:grid-cols-2 lg:grid-cols-4 w-[80%] gap-4 mx-auto mt-20'>
-                    {instructors.slice(0, 4).map((instructor, index) => (
+                <div className='grid mb-28 md:grid-cols-2 lg:grid-cols-4 w-[80%] gap-4 mx-auto mt-20'>
+                    {(instructors || []).slice(0, 4).map((instructor, index) => (
                         <div 
                             key={index} 
                             className='bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300 hover:-translate-y-2'

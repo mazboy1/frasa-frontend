@@ -21,7 +21,7 @@ const MyPaymentHistory = () => {
   useEffect(() => {
     const lastIndex = page * itemsPerPage;
     const firstIndex = lastIndex - itemsPerPage;
-    const currentItems = payments.slice(firstIndex, lastIndex);
+    const currentItems = (payments || []).slice(firstIndex, lastIndex);
     setPaginatedPayments(currentItems);
   }, [page, payments]);
 

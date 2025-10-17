@@ -52,8 +52,8 @@ const ManageUsers = () => {
   // Pagination logic
   const indexOfLastUser = currentPage * usersPerPage;
   const indexOfFirstUser = indexOfLastUser - usersPerPage;
-  const currentUsers = filteredUsers.slice(indexOfFirstUser, indexOfLastUser);
-  const totalPages = Math.ceil(filteredUsers.length / usersPerPage);
+  const currentUsers = (filteredUsers || []).slice(indexOfFirstUser, indexOfLastUser);
+  const totalPages = Math.ceil((filteredUsers?.length || 0) / usersPerPage);
 
   const handleDelete = (id) => {
     Swal.fire({
