@@ -3,6 +3,7 @@ import useAuth from '../../../hooks/useAuth';
 import { useLoaderData, useNavigate } from 'react-router-dom';
 import useAxiosSecure from '../../../hooks/useAxiosSecure';
 import Swal from 'sweetalert2';
+import ImageWithFallback from '../../../components/ImageWithFallback';
 
 const UpdateUser = () => {
   const { user } = useAuth();
@@ -103,11 +104,6 @@ const UpdateUser = () => {
           throw new Error('Tidak dapat mendapatkan URL gambar dari respons');
         }
 
-        // Perbaiki domain URL gambar - tambahkan .com jika diperlukan
-        if (imageUrl.includes('i.ibb.co') && !imageUrl.includes('i.ibb.co.com')) {
-          imageUrl = imageUrl.replace('i.ibb.co', 'i.ibb.co.com');
-        }
-
         updatedData.photoUrl = imageUrl;
       }
 
@@ -147,13 +143,11 @@ const UpdateUser = () => {
         <div className="flex justify-center my-6">
           <div className="text-center">
             <p className="text-sm font-bold text-gray-700 mb-2">Foto Saat Ini:</p>
-            <img 
+            <ImageWithFallback 
               src={userCredentials.photoUrl} 
               alt={userCredentials.name || 'User'} 
               className="w-32 h-32 rounded-full object-cover mx-auto border-2 border-gray-300"
-              onError={(e) => {
-                e.target.src = 'https://via.placeholder.com/128?text=No+Image';
-              }}
+              fallbackSrc="https://via.placeholder.com/128?text=No+Image"
             />
           </div>
         </div>

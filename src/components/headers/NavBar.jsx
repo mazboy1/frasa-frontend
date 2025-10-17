@@ -135,7 +135,6 @@ const NavBar = () => {
           >
             <div className="flex flex-col items-start">
               <h1 className='text-2xl inline-flex gap-2 items-center font-bold'>
-                {/* Gunakan ImageWithFallback untuk logo */}
                 <ImageWithFallback 
                   src="/frasa-logo.png" 
                   alt="Frasa Academy Logo" 
@@ -229,19 +228,14 @@ const NavBar = () => {
                     
                     {/* User Profile Section */}
                     <li className="flex items-center gap-4">
-                      {/* Gunakan ImageWithFallback untuk foto profil pengguna */}
                       <div className="flex items-center gap-3">
                         <ImageWithFallback 
                           src={user?.photoURL || user?.photoUrl} 
                           alt="Profil pengguna" 
                           className='h-10 w-10 rounded-full object-cover border-2 border-primary'
                           fallbackSrc="/default-avatar.png"
-                          onError={(e) => {
-                            e.target.src = "/default-avatar.png";
-                          }}
                           referrerPolicy="no-referrer"
                         />
-                       
                       </div>
                       
                       <button 
@@ -358,10 +352,10 @@ const NavBar = () => {
                 {/* User Info in Mobile Menu */}
                 <li className="flex items-center gap-3 p-4 border-t border-gray-200 dark:border-gray-700">
                   <ImageWithFallback 
-                    src={user.photoURL || user.photoUrl || "/default-avatar.png"} 
+                    src={user.photoURL || user.photoUrl} 
                     alt="Profil pengguna" 
                     className='h-12 w-12 rounded-full object-cover border-2 border-primary'
-                    fallbackSrc="https://via.placeholder.com/48x48?text=User"
+                    fallbackSrc="/default-avatar.png"
                     referrerPolicy="no-referrer"
                   />
                   <div>

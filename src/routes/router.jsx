@@ -30,7 +30,7 @@ import UpdateClass from "../pages/Dashboard/Instructor/UpdateClass";
 import FeedbackForm from "../pages/Dashboard/Admin/FeedbackForm";
 
 // ✅ FIX: ADD MISSING IMPORT
-import DashboardNavigate from "../components/DashboardNavigate";
+import DashboardNavigate from "../routes/DashboardNavigate";
 
 // Loader functions
 const safeLoader = async ({ params }) => {
