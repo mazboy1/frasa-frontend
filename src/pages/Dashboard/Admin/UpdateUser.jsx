@@ -3,7 +3,6 @@ import useAuth from '../../../hooks/useAuth';
 import { useLoaderData, useNavigate } from 'react-router-dom';
 import useAxiosSecure from '../../../hooks/useAxiosSecure';
 import Swal from 'sweetalert2';
-import ImageWithFallback from '../../../components/ImageWithFallback';
 
 const UpdateUser = () => {
   const { user } = useAuth();
@@ -21,7 +20,6 @@ const UpdateUser = () => {
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      // Validasi tipe file
       if (!file.type.startsWith('image/')) {
         Swal.fire({
           title: 'Error!',
@@ -33,7 +31,6 @@ const UpdateUser = () => {
         return;
       }
       
-      // Validasi ukuran file (maksimal 5MB)
       if (file.size > 5 * 1024 * 1024) {
         Swal.fire({
           title: 'Error!',
@@ -47,7 +44,6 @@ const UpdateUser = () => {
       
       setImage(file);
       
-      // Membuat preview gambar
       const reader = new FileReader();
       reader.onloadend = () => {
         setImagePreview(reader.result);
@@ -72,12 +68,10 @@ const UpdateUser = () => {
         about: formData.get('about')
       };
 
-      // Selalu sertakan photoUrl yang sudah ada
       if (!image && userCredentials?.photoUrl) {
         updatedData.photoUrl = userCredentials.photoUrl;
       }
 
-      // Jika ada gambar baru, upload ke imgBB
       if (image) {
         const uploadFormData = new FormData();
         uploadFormData.append('image', image);
@@ -97,7 +91,6 @@ const UpdateUser = () => {
           throw new Error('Upload gambar gagal: ' + (imgData.error?.message || 'Unknown error'));
         }
         
-        // Ambil URL gambar dari respons ImgBB
         let imageUrl = imgData.data.url || imgData.data.display_url;
         
         if (!imageUrl) {
@@ -107,7 +100,6 @@ const UpdateUser = () => {
         updatedData.photoUrl = imageUrl;
       }
 
-      // Kirim update ke backend
       const res = await axiosSecure.put(`/update-user/${userCredentials?._id}`, updatedData);
       
       if (res.data.modifiedCount > 0) {
@@ -138,22 +130,22 @@ const UpdateUser = () => {
       <h1 className='text-center text-4xl font-bold mt-5'>Perbarui: <span className='text-secondary'>{userCredentials?.name || user?.displayName}</span></h1>
       <p className='text-center'>Ubah detail tentang <span className='text-red-400 font-bold'>{userCredentials?.name || user?.displayName}</span></p>
       
-      {/* Menampilkan foto pengguna saat ini */}
       {userCredentials?.photoUrl && (
         <div className="flex justify-center my-6">
           <div className="text-center">
             <p className="text-sm font-bold text-gray-700 mb-2">Foto Saat Ini:</p>
-            <ImageWithFallback 
+            <img 
               src={userCredentials.photoUrl} 
               alt={userCredentials.name || 'User'} 
               className="w-32 h-32 rounded-full object-cover mx-auto border-2 border-gray-300"
-              fallbackSrc="https://via.placeholder.com/128?text=No+Image"
+              onError={(e) => {
+                e.target.src = "https://via.placeholder.com/128?text=No+Image";
+              }}
             />
           </div>
         </div>
       )}
       
-      {/* Area formulir */}
       <section className="">
         <div className="mx-auto px-4 py-16 sm:px-6 lg:px-8">
           <div className="rounded-lg bg-white p-8 shadow-lg lg:p-12">
@@ -227,7 +219,6 @@ const UpdateUser = () => {
                   />
                 </div>
                 
-                {/* Field Upload Foto Baru */}
                 <div>
                   <label className="ml-2 pb-1 block text-sm font-bold text-gray-700" htmlFor="image">
                     Foto Baru (opsional)

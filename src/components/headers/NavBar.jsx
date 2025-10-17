@@ -6,7 +6,6 @@ import { motion } from "framer-motion";
 import { FaBars } from "react-icons/fa";
 import { AuthContext } from '../../utilities/providers/AuthProvider';
 import Swal from 'sweetalert2';
-import ImageWithFallback from '../../components/ImageWithFallback';
 
 const navLinks = [
   { name: 'Beranda', route: '/' },
@@ -135,11 +134,13 @@ const NavBar = () => {
           >
             <div className="flex flex-col items-start">
               <h1 className='text-2xl inline-flex gap-2 items-center font-bold'>
-                <ImageWithFallback 
+                <img 
                   src="/frasa-logo.png" 
                   alt="Frasa Academy Logo" 
                   className='w-[200px] h-[50px] object-contain'
-                  fallbackSrc="https://via.placeholder.com/200x50?text=Frasa+Logo"
+                  onError={(e) => {
+                    e.target.src = "https://via.placeholder.com/200x50?text=Frasa+Logo";
+                  }}
                 />
               </h1>
             </div>
@@ -229,11 +230,13 @@ const NavBar = () => {
                     {/* User Profile Section */}
                     <li className="flex items-center gap-4">
                       <div className="flex items-center gap-3">
-                        <ImageWithFallback 
-                          src={user?.photoURL || user?.photoUrl} 
+                        <img 
+                          src={user?.photoURL || user?.photoUrl || "/default-avatar.png"} 
                           alt="Profil pengguna" 
                           className='h-10 w-10 rounded-full object-cover border-2 border-primary'
-                          fallbackSrc="/default-avatar.png"
+                          onError={(e) => {
+                            e.target.src = "/default-avatar.png";
+                          }}
                           referrerPolicy="no-referrer"
                         />
                       </div>
@@ -351,11 +354,13 @@ const NavBar = () => {
                 
                 {/* User Info in Mobile Menu */}
                 <li className="flex items-center gap-3 p-4 border-t border-gray-200 dark:border-gray-700">
-                  <ImageWithFallback 
-                    src={user.photoURL || user.photoUrl} 
+                  <img 
+                    src={user.photoURL || user.photoUrl || "/default-avatar.png"} 
                     alt="Profil pengguna" 
                     className='h-12 w-12 rounded-full object-cover border-2 border-primary'
-                    fallbackSrc="/default-avatar.png"
+                    onError={(e) => {
+                      e.target.src = "/default-avatar.png";
+                    }}
                     referrerPolicy="no-referrer"
                   />
                   <div>

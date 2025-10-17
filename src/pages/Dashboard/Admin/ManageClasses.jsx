@@ -6,7 +6,6 @@ import Swal from 'sweetalert2';
 import { FiCheckCircle, FiXCircle, FiMessageSquare } from 'react-icons/fi';
 import defaultClassImage from '../../../assets/user/default-profile.png';
 import SectionTitle from '../../../components/SectioniTitle';
-import ImageWithFallback from '../../../components/ImageWithFallback'; // Import komponen
 
 const ManageClasses = () => {
   const navigate = useNavigate();
@@ -94,7 +93,6 @@ const ManageClasses = () => {
       });
 
       if (reason) {
-        // PERBAIKAN: Menggunakan endpoint yang sama dengan approve
         const response = await axiosSecure.patch(`/change-status/${id}`, {
           status: 'rejected',
           reason
@@ -126,7 +124,6 @@ const ManageClasses = () => {
     }
   };
 
-  
   return (
     <div className="px-4 py-8">
       <SectionTitle
@@ -170,12 +167,13 @@ const ManageClasses = () => {
                 filteredClasses.map((cls) => (
                   <tr key={cls._id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-6 py-4 whitespace-nowrap">
-                      {/* Gunakan ImageWithFallback untuk gambar kelas */}
-                      <ImageWithFallback
-                        src={cls.image}
+                      <img 
+                        src={cls.image} 
                         alt={cls.name}
                         className="h-12 w-12 rounded-lg object-cover border border-gray-200"
-                        fallbackSrc={defaultClassImage}
+                        onError={(e) => {
+                          e.target.src = defaultClassImage;
+                        }}
                       />
                     </td>
                     <td className="px-6 py-4">
