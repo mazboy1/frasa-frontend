@@ -28,19 +28,20 @@ const ManageUsers = () => {
     setLoading(true);
     axiosFetch.get('/users')
       .then(res => {
-        setUsers(res.data);
-        setLoading(false);
+        const usersData = Array.isArray(res.data)
+          ? res.data
+          : Array.isArray(res.data?.data)
+          ? res.data.data
+          : [];
+
+        setUsers(usersData);
       })
-      .catch(err => {
-        console.log(err);
-        setLoading(false);
-        Swal.fire(
-          'Error!',
-          'Gagal memuat data pengguna.',
-          'error'
-        );
-      });
+      .catch(() => {
+        Swal.fire('Error!', 'Gagal memuat data pengguna.', 'error');
+      })
+      .finally(() => setLoading(false));
   }, [axiosFetch]);
+
 
   // Filter users based on search term
   const filteredUsers = users.filter(user => 

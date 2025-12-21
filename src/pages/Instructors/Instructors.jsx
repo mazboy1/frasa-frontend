@@ -8,27 +8,20 @@ const Instructors = () => {
   const axiosFetch = useAxiosFetch();
 
   useEffect(() => {
-    const fetchInstructors = async () => {
-      try {
-        const response = await axiosFetch.get('/instructors');
-        // Pastikan response berupa array
-        if (Array.isArray(response.data)) {
-          setInstructors(response.data);
-        } else if (Array.isArray(response.data?.data)) {
-          setInstructors(response.data.data);
-        } else {
-          console.error("Data instructors bukan array:", response.data);
-          setInstructors([]);
-        }
-      } catch (error) {
-        console.error("Gagal memuat data instructors:", error);
-        setInstructors([]);
-      } finally {
+    axiosFetch.get('/instructors')
+      .then(res => {
+        const instructorData = Array.isArray(res.data)
+          ? res.data
+          : Array.isArray(res.data?.data)
+            ? res.data.data
+            : [];
+        setInstructors(instructorData);
         setIsLoading(false);
-      }
-    };
-
-    fetchInstructors();
+      })
+      .catch(() => {
+        setInstructors([]);
+        setIsLoading(false);
+      });
   }, [axiosFetch]);
 
   if (isLoading) {

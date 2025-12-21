@@ -10,20 +10,21 @@ const PopularTeacher = () => {
     const axiosFetch = useAxiosFetch();
 
     useEffect(() => {
-        const fetchData = async () => {
-            try {
-                const response = await axiosFetch.get('/instructors'); // Ganti endpoint
-                setInstructors(response.data);
-            } catch (err) {
-                setError('Gagal memuat data instructors');
-                console.error(err);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchData();
-    }, [axiosFetch]);
+        axiosFetch.get('/instructors')
+            .then(res => {
+            const instructorData = Array.isArray(res.data)
+                ? res.data
+                : Array.isArray(res.data?.data)
+                ? res.data.data
+                : [];
+            setInstructors(instructorData);
+            setLoading(false);
+            })
+            .catch(() => {
+            setInstructors([]);
+            setLoading(false);
+            });
+        }, [axiosFetch]);
 
     return (
         <section className='container mx-auto my-20 px-4'>

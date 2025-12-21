@@ -28,13 +28,31 @@ const MyPaymentHistory = () => {
   useEffect(() => {
     axiosSecure.get(`/payment-history/${currentUser?.email}`)
       .then(res => {
-        setPayments(res.data);
+        const paymentData = Array.isArray(res.data)
+          ? res.data
+          : Array.isArray(res.data?.data)
+            ? res.data.data
+            : [];
+        setPayments(paymentData);
         setLoading(false);
       })
-      .catch(err => console.log(err));
-  }, [currentUser?.email, axiosSecure]);
+      .catch(() => {
+        setPayments([]);
+        setLoading(false);
+      });
+  }, [axiosSecure, currentUser?.email]);
 
-  const totalPaidAmount = payments.reduce((acc, curr) => acc + curr.amount, 0);
+  useEffect(() => {
+    const lastIndex = page * itemsPerPage;
+    const firstIndex = lastIndex - itemsPerPage;
+    setPaginatedPayments(payments.slice(firstIndex, lastIndex));
+  }, [page, payments]);
+
+  const totalPaidAmount = payments.reduce(
+    (acc, curr) => acc + (curr?.amount || 0),
+    0
+  );
+
 
   if (loading) {
     return <p>Memuat data...</p>;

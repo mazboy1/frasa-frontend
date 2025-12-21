@@ -5,13 +5,23 @@ import Card from './Card';
 const PopularClasses = () => {
     const axiosFetch = useAxiosFetch();
     const [classes, setClasses] = useState([]);
-    useEffect(() => {
-      const fetchClasses = async () => {
-        const response = await axiosFetch.get('/classes')
-        setClasses(response.data)
-      }
-      fetchClasses();
-    }, [])
+
+  useEffect(() => {
+    axiosFetch.get('/classes')
+      .then(res => {
+        const classData = Array.isArray(res.data)
+          ? res.data
+          : Array.isArray(res.data?.data)
+            ? res.data.data
+            : [];
+        setClasses(classData);
+      })
+      .catch(() => setClasses([]));
+  }, [axiosFetch]);
+
+  {classes.slice(0, 6).map((item, index) => (
+    <Card key={item?._id || index} item={item} />
+  ))}
 
     // console.log(classes)
   return (
