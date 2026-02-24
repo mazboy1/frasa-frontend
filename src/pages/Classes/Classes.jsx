@@ -24,17 +24,21 @@ const Classes = () => {
     setError(null);
     
     axiosFetch
-      .get('/classes') // Pastikan endpoint ini sesuai backend kamu
+      .get('/classes')
       .then(res => {
         console.log("Fetched classes:", res.data);
-        // Pastikan data yang diterima adalah array
-        if (Array.isArray(res.data)) {
-          setClasses(res.data);
-        } else if (res.data?.data && Array.isArray(res.data.data)) {
-          // Jika data terbungkus dalam properti 'data'
+        
+        // Ambil data dari res.data.data (karena response: {success: true, data: [...]})
+        if (res.data?.data && Array.isArray(res.data.data)) {
+          console.log("Jumlah kelas:", res.data.data.length);
           setClasses(res.data.data);
-        } else {
-          console.error("Data format error:", res.data);
+        } 
+        else if (Array.isArray(res.data)) {
+          console.log("Jumlah kelas (array langsung):", res.data.length);
+          setClasses(res.data);
+        }
+        else {
+          console.error("Format data tidak dikenal:", res.data);
           setError("Format data tidak sesuai");
           setClasses([]);
         }
@@ -175,12 +179,12 @@ const Classes = () => {
               
               {/* Gambar dengan fallback */}
               <img 
-                src={cls.image || '/placeholder-image.jpg'} 
+                src={cls.image || 'https://via.placeholder.com/300x200?text=Kelas'} 
                 alt={cls.name || 'Kelas'} 
                 className="object-cover w-full h-full"
                 onError={(e) => {
                   e.target.onerror = null;
-                  e.target.src = '/placeholder-image.jpg';
+                  e.target.src = 'https://via.placeholder.com/300x200?text=Kelas';
                 }}
               />
               
