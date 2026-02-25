@@ -60,13 +60,8 @@ const DashboardLayout = () => {
   const [open, setOpen] = useState(true);
   const { loader, logout } = useAuth();
   const { currentUser } = useUser();
-  // 🔥 PERBAIKAN: Gunakan toLowerCase() untuk konsistensi
-  const role = currentUser?.role?.toLowerCase();
+  const role = currentUser?.role;
   const navigate = useNavigate();
-
-  // 🔍 TAMBAHKAN DEBUG
-  console.log('🔍 DashboardLayout - User:', currentUser);
-  console.log('🔍 DashboardLayout - Role (lowercase):', role);
 
   const handleLogOut = (event) => {
     Swal.fire({
@@ -85,7 +80,7 @@ const DashboardLayout = () => {
             text: "Anda telah keluar dari sistem.",
             icon: "success"
           })
-        ).catch((err) => console.log(err));    
+        ).catch((err) => console.log(error));    
       }
       navigate("/")
     });
@@ -172,7 +167,7 @@ const DashboardLayout = () => {
           </ul>
         )}
 
-        {/* student role - SUDAH BENAR menggunakan "user" */}
+        {/* student role */}
         {role === "user" && (
           <ul className="pt-6">
             <p className={`ml-3 text-gray-500 ${!open && "hidden"}`}>
