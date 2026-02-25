@@ -3,7 +3,6 @@ import  useUser  from '../../hooks/useUser';
 import { HashLoader } from 'react-spinners';
 import DashboardNavigate from '../../routes/DashboardNavigate';
 
-
 const Dashboard = () => {
   const { currentUser, isLoading } = useUser();
   const role = currentUser?.role;
