@@ -1,4 +1,3 @@
-// DashboardLayout.jsx - FIXED role checking
 import React, { useState } from 'react';
 import useAuth from '../hooks/useAuth';
 import useUser from '../hooks/useUser';
@@ -29,7 +28,7 @@ const instructorNavItem = [
   { to: "/dashboard/my-classes", icon: <IoSchoolSharp className="text-2xl"/>, label: "Kelas Saya"},
   { to: "/dashboard/my-pending", icon: <MdPendingActions className="text-2xl"/>, label: "Kelas Tertunda"},
   { to: "/dashboard/my-approved", icon: <IoMdDoneAll className="text-2xl"/>, label: "Kelas Disetujui"},
-];
+]
 
 const students = [
   {to: "/dashboard/student-cp", icon: <BiHomeAlt className="text-2xl" />, label: "Beranda"},
@@ -61,14 +60,7 @@ const DashboardLayout = () => {
   const [open, setOpen] = useState(true);
   const { loader, logout } = useAuth();
   const { currentUser } = useUser();
-  
-  // ✅ FIXED: Normalize role to handle both 'user' and 'student'
-  const rawRole = currentUser?.role?.toLowerCase() || '';
-  const role = rawRole === 'student' ? 'user' : rawRole; // Normalize 'student' to 'user'
-  
-  console.log('DashboardLayout - Raw role:', rawRole);
-  console.log('DashboardLayout - Normalized role:', role);
-  
+  const role = currentUser?.role;
   const navigate = useNavigate();
 
   const handleLogOut = (event) => {
@@ -175,8 +167,8 @@ const DashboardLayout = () => {
           </ul>
         )}
 
-        {/* student role - handle both 'user' and 'student' */}
-        {(role === "user" || role === "student") && (
+        {/* student role */}
+        {role === "user" && (
           <ul className="pt-6">
             <p className={`ml-3 text-gray-500 ${!open && "hidden"}`}>
               <small>MENU</small>

@@ -8,8 +8,7 @@ const DashboardNavigate = () => {
 
   console.log('🎯 DashboardNavigate Debug:');
   console.log('User:', currentUser);
-  console.log('Role from API:', currentUser?.role);
-  console.log('Role type:', typeof currentUser?.role);
+  console.log('Role:', currentUser?.role);
   console.log('Loading:', isLoading);
   console.log('Error:', error);
 
@@ -48,33 +47,22 @@ const DashboardNavigate = () => {
     return <Navigate to="/login" replace />;
   }
 
-  // ✅ FIXED: Handle multiple possible role values
-  const role = currentUser.role?.toLowerCase() || '';
+  // Role-based redirection - FIXED LOGIC
+  const role = currentUser.role?.toLowerCase();
   
-  console.log('📍 Normalized role:', role);
-  console.log('📍 Redirecting to based on role');
+  console.log('📍 Redirecting to:', role);
 
-  // Check for admin
-  if (role === 'admin') {
-    console.log('➡️ Redirecting to admin dashboard');
-    return <Navigate to="/dashboard/admin-home" replace />;
+  switch(role) {
+    case 'admin':
+      return <Navigate to="/dashboard/admin-home" replace />;
+    case 'instructor':
+      return <Navigate to="/dashboard/instructor-cp" replace />;
+    case 'user':
+      return <Navigate to="/dashboard/student-cp" replace />;
+    default:
+      console.warn('Unknown role, defaulting to student');
+      return <Navigate to="/dashboard/student-cp" replace />;
   }
-  
-  // Check for instructor
-  if (role === 'instructor') {
-    console.log('➡️ Redirecting to instructor dashboard');
-    return <Navigate to="/dashboard/instructor-cp" replace />;
-  }
-  
-  // Check for student (handle both 'user' and 'student')
-  if (role === 'user' || role === 'student') {
-    console.log('➡️ Redirecting to student dashboard');
-    return <Navigate to="/dashboard/student-cp" replace />;
-  }
-
-  // Default fallback
-  console.warn('Unknown role:', role, 'defaulting to student');
-  return <Navigate to="/dashboard/student-cp" replace />;
 };
 
 export default DashboardNavigate;
