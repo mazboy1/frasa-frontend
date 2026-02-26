@@ -1,4 +1,4 @@
-// components/DashboardLayout.jsx - FINAL FIXED VERSION
+// /src/layout/DashboardLayout.jsx - FINAL FIXED VERSION
 import React, { useState, useEffect } from 'react';
 import useAuth from '../hooks/useAuth';
 import useUser from '../hooks/useUser';
@@ -15,7 +15,7 @@ import { NavLink, useNavigate, Link, Outlet } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import Scroll from '../hooks/useScroll';
 import { HashLoader } from 'react-spinners';
-import DebugRole from './DebugRole'; // Import debug component
+import DebugRole from '../components/DebugRole'; // Import debug component
 
 const adminNavItems = [
   { to: "/dashboard/admin-home", icon: <BiHomeAlt className="text-2xl" />, label: "Beranda Admin" },
@@ -289,7 +289,7 @@ const DashboardLayout = () => {
       <div className='h-screen overflow-y-auto px-8 flex-1'>
         <Scroll/>
         <Outlet/>
-        <DebugRole /> {/* Tambahkan debug component */}
+        <DebugRole />
       </div>
     </div>
   );

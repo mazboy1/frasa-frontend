@@ -1,4 +1,4 @@
-// Dashboard.jsx - FINAL FIXED VERSION
+// /src/pages/Dashboard/Dashboard.jsx - FINAL FIXED VERSION
 import React from 'react';
 import useUser from '../../hooks/useUser';
 import { HashLoader } from 'react-spinners';

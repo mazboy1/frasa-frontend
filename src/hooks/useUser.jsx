@@ -1,10 +1,10 @@
-// hooks/useUser.js - FINAL FIXED VERSION
+// /src/hooks/useUser.jsx - FINAL FIXED VERSION
 import { useEffect, useState } from 'react';
 import useAuth from './useAuth';
 import useAxiosFetch from './useAxiosFetch';
 
 const useUser = () => {
-  const { user } = useAuth(); // Ambil user dari AuthContext
+  const { user } = useAuth();
   const axiosFetch = useAxiosFetch();
   const [currentUser, setCurrentUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);

@@ -1,4 +1,4 @@
-// components/DashboardNavigate.jsx - FINAL FIXED VERSION
+// /src/routes/DashboardNavigate.jsx - FINAL FIXED VERSION
 import React from 'react';
 import useUser from '../hooks/useUser';
 import { Navigate } from 'react-router-dom';

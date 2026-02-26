@@ -1,4 +1,4 @@
-// hooks/useAuth.js - FINAL FIXED VERSION
+// /src/hooks/useAuth.jsx - PASTIKAN SEPERTI INI
 import { useContext } from "react";
 import { AuthContext } from "../utilities/providers/AuthProvider";
 
