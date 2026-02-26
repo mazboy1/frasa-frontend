@@ -1,3 +1,4 @@
+// Login.jsx - FIX LENGKAP
 import React, { useState } from 'react';
 import { 
   MdOutlineRemoveRedEye, 
@@ -10,19 +11,6 @@ import GoogleLogin from '../../components/Social/GoogleLogin';
 import useAuth from '../../hooks/useAuth';
 import Swal from 'sweetalert2';
 
-// Fallback auth for safety
-const fallbackAuth = {
-  login: async (email, password) => {
-    console.log("🔄 Fallback login called");
-    throw new Error("Authentication system is temporarily unavailable");
-  },
-  user: null,
-  loading: false,
-  error: null,
-  setError: () => {},
-  setLoading: () => {}
-};
-
 const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isFocused, setIsFocused] = useState({ email: false, password: false });
@@ -31,24 +19,12 @@ const Login = () => {
   
   const location = useLocation();
   const navigate = useNavigate();
+  const auth = useAuth();
 
-  // Safe auth with fallback
-  let auth;
-  try {
-    auth = useAuth();
-    if (auth._isFallback || typeof auth.login !== 'function') {
-      auth = fallbackAuth;
-    }
-  } catch (error) {
-    auth = fallbackAuth;
-    setLocalError("Authentication system error");
-  }
-
-  const { login, error: authError, setError, loading: authLoading, setLoading } = auth;
+  const { login, error: authError, setError, loading: authLoading } = auth;
   
-  // Use local state if auth state is problematic
   const error = authError || localError;
-  const loading = (authLoading && typeof authLoading === 'boolean') ? authLoading : localLoading;
+  const loading = authLoading || localLoading;
 
   const showSuccessAlert = () => {
     Swal.fire({
@@ -78,14 +54,12 @@ const Login = () => {
     
     try {
       setLocalLoading(true);
-      setLoading?.(true);
 
       const data = new FormData(e.target);
       const formData = Object.fromEntries(data);
       
       console.log("🔄 Login attempt:", formData.email);
       
-      // Validate inputs
       if (!formData.email || !formData.password) {
         throw new Error("Email dan password harus diisi");
       }
@@ -98,11 +72,9 @@ const Login = () => {
       console.error("❌ Login error:", err);
       const errorMessage = err.message || "Terjadi kesalahan saat login";
       setLocalError(errorMessage);
-      setError?.(errorMessage);
       showErrorAlert(errorMessage);
     } finally {
       setLocalLoading(false);
-      setLoading?.(false);
     }
   };
 

@@ -1,19 +1,21 @@
-import React, { useState } from 'react';
+// components/DashboardLayout.jsx - FINAL FIXED VERSION
+import React, { useState, useEffect } from 'react';
 import useAuth from '../hooks/useAuth';
 import useUser from '../hooks/useUser';
 import { BiHomeAlt, BiLogInCircle, BiSelectMultiple } from "react-icons/bi";
 import { FaHome, FaUsers } from "react-icons/fa";
-import { IoHandLeftOutline, IoSchoolSharp } from "react-icons/io5";
+import { IoSchoolSharp } from "react-icons/io5";
 import { IoMdDoneAll } from "react-icons/io";
 import { BsFillPostcardFill } from 'react-icons/bs';
 import { SiGoogleclassroom, SiInstructure } from 'react-icons/si';
 import { TbBrandAppleArcade } from 'react-icons/tb';
-import { NavLink, useNavigate, Link, Outlet } from 'react-router-dom';
-import { MdExplore, MdOfflineBolt, MdPayments, MdPending, MdPendingActions } from 'react-icons/md';
+import { MdExplore, MdOfflineBolt, MdPayments, MdPendingActions } from 'react-icons/md';
 import { GiFigurehead } from 'react-icons/gi';
+import { NavLink, useNavigate, Link, Outlet } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import Scroll from '../hooks/useScroll';
 import { HashLoader } from 'react-spinners';
+import DebugRole from './DebugRole'; // Import debug component
 
 const adminNavItems = [
   { to: "/dashboard/admin-home", icon: <BiHomeAlt className="text-2xl" />, label: "Beranda Admin" },
@@ -28,7 +30,7 @@ const instructorNavItem = [
   { to: "/dashboard/my-classes", icon: <IoSchoolSharp className="text-2xl"/>, label: "Kelas Saya"},
   { to: "/dashboard/my-pending", icon: <MdPendingActions className="text-2xl"/>, label: "Kelas Tertunda"},
   { to: "/dashboard/my-approved", icon: <IoMdDoneAll className="text-2xl"/>, label: "Kelas Disetujui"},
-]
+];
 
 const students = [
   {to: "/dashboard/student-cp", icon: <BiHomeAlt className="text-2xl" />, label: "Beranda"},
@@ -58,13 +60,18 @@ const lastMenuItems = [
 
 const DashboardLayout = () => {
   const [open, setOpen] = useState(true);
-  const { loader, logout } = useAuth();
-  const { currentUser } = useUser();
-  const role = currentUser?.role;
+  const { logout } = useAuth();
+  const { currentUser, isLoading: userLoading, refreshUser } = useUser();
+  const role = currentUser?.role?.toLowerCase() || '';
   const navigate = useNavigate();
 
-  const handleLogOut = (event) => {
-    Swal.fire({
+  useEffect(() => {
+    console.log('📊 DashboardLayout - Current Role:', role);
+    console.log('📊 DashboardLayout - User Data:', currentUser);
+  }, [role, currentUser]);
+
+  const handleLogOut = async () => {
+    const result = await Swal.fire({
       title: "Apakah Anda yakin?",
       text: "Anda akan keluar dari sistem!",
       icon: "warning",
@@ -72,134 +79,53 @@ const DashboardLayout = () => {
       confirmButtonColor: "#3085d6",
       cancelButtonColor: "#d33",
       confirmButtonText: "Ya, Keluar!"
-    }).then((result) => {
-      if (result.isConfirmed) {
-        logout().then(
-          Swal.fire({
-            title: "Berhasil Keluar",
-            text: "Anda telah keluar dari sistem.",
-            icon: "success"
-          })
-        ).catch((err) => console.log(error));    
-      }
-      navigate("/")
     });
+
+    if (result.isConfirmed) {
+      try {
+        await logout();
+        localStorage.removeItem('token');
+        
+        Swal.fire({
+          title: "Berhasil Keluar",
+          text: "Anda telah keluar dari sistem.",
+          icon: "success"
+        });
+        
+        navigate("/");
+      } catch (err) {
+        console.error('Logout error:', err);
+        Swal.fire({
+          title: "Error",
+          text: "Gagal keluar dari sistem",
+          icon: "error"
+        });
+      }
+    }
+  };
+
+  if (userLoading) {
+    return (
+      <div className='flex justify-center items-center h-screen'>
+        <HashLoader color="#36d7b7" size={50}/>
+      </div>
+    );
   }
 
-  if (loader) {
-    return <div className='flex justify-center items-center h-screen'>
-      <HashLoader color="#36d7b7" size={50}/>
-    </div>;
+  if (!currentUser) {
+    navigate('/login');
+    return null;
   }
 
-  return (
-    <div className='flex'>
-      <div className={`${open ? "w-72 overflow-y-auto" : "w-[90px] overflow-auto"} bg-white h-screen p-5 md:block hidden pt-8 relative duration-300`}>
-        <div className='flex gap-x-4 items-center'>
-          <img 
-            onClick={() => setOpen(!open)} 
-            src="/frasa-logo.png" 
-            alt="" 
-            className={`cursor-pointer h-[40px] duration-500 ${open && "rotate-[360deg]"}`}
-          />
-          <Link to="/">
-            <h1 
-              onClick={() => setOpen(!open)} 
-              className={`text-dark-primary cursor-pointer font-bold origin-left text-xl duration-200 ${!open && "scale-0"}`}
-            >
-              
-            </h1>
-          </Link>
-        </div>
-
-        {/* Navlinks */}
-        {/* admin role */}
-        {role === "admin" && (
+  const renderSidebarContent = () => {
+    switch(role) {
+      case 'admin':
+        return (
           <ul className="pt-6">
             <p className={`ml-3 text-gray-500 ${!open && "hidden"}`}>
-              <small>MENU</small>
+              <small>MENU ADMIN</small>
             </p>
-            {role === "admin" &&
-              adminNavItems.map((menuItem, index) => (
-                <li key={index} className="mb-2">
-                  <NavLink
-                    to={menuItem.to}
-                    className={({ isActive }) =>
-                      `flex ${
-                        isActive ? "bg-primary text-white" : "text-[#413F44]"
-                      } duration-150 rounded-md p-2 cursor-pointer hover:bg-secondary hover:text-white font-bold text-sm items-center gap-x-4`
-                    }
-                  >
-                    {menuItem.icon}
-                    <span className={`${!open && "hidden"} origin-left duration-200`}>
-                      {menuItem.label}
-                    </span>
-                  </NavLink>
-                </li>
-              ))}
-          </ul>
-        )}
-
-        {/* instructor role */}
-        {role === "instructor" && (
-          <ul className="pt-6">
-            <p className={`ml-3 text-gray-500 ${!open && "hidden"}`}>
-              <small>MENU</small>
-            </p>
-            {
-              instructorNavItem.map((menuItem, index) => (
-                <li key={index} className="mb-2">
-                  <NavLink
-                    to={menuItem.to}
-                    className={({ isActive }) =>
-                      `flex ${
-                        isActive ? "bg-primary text-white" : "text-[#413F44]"
-                      } duration-150 rounded-md p-2 cursor-pointer hover:bg-secondary hover:text-white font-bold text-sm items-center gap-x-4`
-                    }
-                  >
-                    {menuItem.icon}
-                    <span className={`${!open && "hidden"} origin-left duration-200`}>
-                      {menuItem.label}
-                    </span>
-                  </NavLink>
-                </li>
-              ))}
-          </ul>
-        )}
-
-        {/* student role */}
-        {role === "user" && (
-          <ul className="pt-6">
-            <p className={`ml-3 text-gray-500 ${!open && "hidden"}`}>
-              <small>MENU</small>
-            </p>
-            {
-              students.map((menuItem, index) => (
-                <li key={index} className="mb-2">
-                  <NavLink
-                    to={menuItem.to}
-                    className={({ isActive }) =>
-                      `flex ${
-                        isActive ? "bg-primary text-white" : "text-[#413F44]"
-                      } duration-150 rounded-md p-2 cursor-pointer hover:bg-secondary hover:text-white font-bold text-sm items-center gap-x-4`
-                    }
-                  >
-                    {menuItem.icon}
-                    <span className={`${!open && "hidden"} origin-left duration-200`}>
-                      {menuItem.label}
-                    </span>
-                  </NavLink>
-                </li>
-              ))}
-          </ul>
-        )}
-
-        <ul className='pt-6'>
-          <p className={`ml-3 text-gray-500 uppercase mb-3 ${!open && "hidden"}`}>
-            <small>Link</small>
-          </p>
-          {
-            lastMenuItems.map((menuItem, index) => (
+            {adminNavItems.map((menuItem, index) => (
               <li key={index} className="mb-2">
                 <NavLink
                   to={menuItem.to}
@@ -215,12 +141,140 @@ const DashboardLayout = () => {
                   </span>
                 </NavLink>
               </li>
-            ))
-          }
+            ))}
+          </ul>
+        );
+
+      case 'instructor':
+        return (
+          <ul className="pt-6">
+            <p className={`ml-3 text-gray-500 ${!open && "hidden"}`}>
+              <small>MENU INSTRUKTUR</small>
+            </p>
+            {instructorNavItem.map((menuItem, index) => (
+              <li key={index} className="mb-2">
+                <NavLink
+                  to={menuItem.to}
+                  className={({ isActive }) =>
+                    `flex ${
+                      isActive ? "bg-primary text-white" : "text-[#413F44]"
+                    } duration-150 rounded-md p-2 cursor-pointer hover:bg-secondary hover:text-white font-bold text-sm items-center gap-x-4`
+                  }
+                >
+                  {menuItem.icon}
+                  <span className={`${!open && "hidden"} origin-left duration-200`}>
+                    {menuItem.label}
+                  </span>
+                </NavLink>
+              </li>
+            ))}
+          </ul>
+        );
+
+      case 'user':
+      case 'student':
+        return (
+          <ul className="pt-6">
+            <p className={`ml-3 text-gray-500 ${!open && "hidden"}`}>
+              <small>MENU SISWA</small>
+            </p>
+            {students.map((menuItem, index) => (
+              <li key={index} className="mb-2">
+                <NavLink
+                  to={menuItem.to}
+                  className={({ isActive }) =>
+                    `flex ${
+                      isActive ? "bg-primary text-white" : "text-[#413F44]"
+                    } duration-150 rounded-md p-2 cursor-pointer hover:bg-secondary hover:text-white font-bold text-sm items-center gap-x-4`
+                  }
+                >
+                  {menuItem.icon}
+                  <span className={`${!open && "hidden"} origin-left duration-200`}>
+                    {menuItem.label}
+                  </span>
+                </NavLink>
+              </li>
+            ))}
+          </ul>
+        );
+
+      default:
+        console.warn(`Unknown role: ${role}, showing default menu`);
+        return (
+          <ul className="pt-6">
+            <p className={`ml-3 text-gray-500 ${!open && "hidden"}`}>
+              <small>MENU</small>
+            </p>
+            {students.map((menuItem, index) => (
+              <li key={index} className="mb-2">
+                <NavLink
+                  to={menuItem.to}
+                  className={({ isActive }) =>
+                    `flex ${
+                      isActive ? "bg-primary text-white" : "text-[#413F44]"
+                    } duration-150 rounded-md p-2 cursor-pointer hover:bg-secondary hover:text-white font-bold text-sm items-center gap-x-4`
+                  }
+                >
+                  {menuItem.icon}
+                  <span className={`${!open && "hidden"} origin-left duration-200`}>
+                    {menuItem.label}
+                  </span>
+                </NavLink>
+              </li>
+            ))}
+          </ul>
+        );
+    }
+  };
+
+  return (
+    <div className='flex'>
+      {/* Sidebar */}
+      <div className={`${open ? "w-72 overflow-y-auto" : "w-[90px] overflow-auto"} bg-white h-screen p-5 md:block hidden pt-8 relative duration-300`}>
+        <div className='flex gap-x-4 items-center'>
+          <img 
+            onClick={() => setOpen(!open)} 
+            src="/frasa-logo.png" 
+            alt="Logo" 
+            className={`cursor-pointer h-[40px] duration-500 ${open && "rotate-[360deg]"}`}
+          />
+          <Link to="/">
+            <h1 
+              onClick={() => setOpen(!open)} 
+              className={`text-dark-primary cursor-pointer font-bold origin-left text-xl duration-200 ${!open && "scale-0"}`}
+            >
+              Frasa ID
+            </h1>
+          </Link>
+        </div>
+
+        {renderSidebarContent()}
+
+        <ul className='pt-6 border-t mt-6'>
+          <p className={`ml-3 text-gray-500 uppercase mb-3 ${!open && "hidden"}`}>
+            <small>Link</small>
+          </p>
+          {lastMenuItems.map((menuItem, index) => (
+            <li key={index} className="mb-2">
+              <NavLink
+                to={menuItem.to}
+                className={({ isActive }) =>
+                  `flex ${
+                    isActive ? "bg-primary text-white" : "text-[#413F44]"
+                  } duration-150 rounded-md p-2 cursor-pointer hover:bg-secondary hover:text-white font-bold text-sm items-center gap-x-4`
+                }
+              >
+                {menuItem.icon}
+                <span className={`${!open && "hidden"} origin-left duration-200`}>
+                  {menuItem.label}
+                </span>
+              </NavLink>
+            </li>
+          ))}
           <li>
             <button                        
-              onClick={() => handleLogOut()}
-              className="flex duration-150 rounded-md p-2 cursor-pointer hover:bg-secondary hover:text-white font-bold text-sm items-center gap-x-4"
+              onClick={handleLogOut}
+              className="flex duration-150 rounded-md p-2 cursor-pointer hover:bg-secondary hover:text-white font-bold text-sm items-center gap-x-4 w-full text-left"
             >
               <BiLogInCircle className='text-2xl'/>
               <span className={`${!open && "hidden"} origin-left duration-200`}>
@@ -231,9 +285,11 @@ const DashboardLayout = () => {
         </ul>
       </div>
       
+      {/* Main Content */}
       <div className='h-screen overflow-y-auto px-8 flex-1'>
         <Scroll/>
         <Outlet/>
+        <DebugRole /> {/* Tambahkan debug component */}
       </div>
     </div>
   );
