@@ -3,7 +3,7 @@ import axios from 'axios';
 
 const useAxiosSecure = () => {
   const axiosInstance = axios.create({
-    baseURL: 'https://frasa-backend.vercel.app', // TANPA /api
+    baseURL: 'https://frasa-backend.vercel.app/api', // TANPA /api
     timeout: 30000,
     headers: {
       'Content-Type': 'application/json',
