@@ -1,13 +1,13 @@
-
-// src/hooks/useAxiosFetch.jsx
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import axios from 'axios';
 
 const useAxiosFetch = () => {
-  const axiosInstance = axios.create({
-    baseURL: 'https://frasa-backend.vercel.app/api', // <-- pastikan /api
-    // timeout: 10000, // optional
-  });
+  // ✅ useMemo agar instance tidak berubah setiap render
+  const axiosInstance = useMemo(() => {
+    return axios.create({
+      baseURL: 'https://frasa-backend.vercel.app/api/',
+    });
+  }, []);
 
   useEffect(() => {
     const requestInterceptor = axiosInstance.interceptors.request.use(
@@ -24,7 +24,7 @@ const useAxiosFetch = () => {
       axiosInstance.interceptors.request.eject(requestInterceptor);
       axiosInstance.interceptors.response.eject(responseInterceptor);
     };
-  }, []); // don't include axiosInstance in deps
+  }, [axiosInstance]);
 
   return axiosInstance;
 };
