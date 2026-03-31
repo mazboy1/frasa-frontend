@@ -1,4 +1,4 @@
-// components/ApprovedCourse.jsx - FINAL COMPLETE FIXED VERSION
+// components/ApprovedCourse.jsx - FIXED VERSION
 import React, { useEffect, useState } from 'react';
 import useAxiosSecure from '../../../hooks/useAxiosSecure';
 import useUser from '../../../hooks/useUser';
@@ -24,8 +24,8 @@ const ApprovedCourse = () => {
           return;
         }
 
-        // ✅ GUNAKAN ENDPOINT BARU
-        const response = await axiosSecure.get('/api/instructor/approved-classes', {
+        // ✅ PERBAIKAN: Hapus /api/ prefix karena baseURL sudah punya /api/
+        const response = await axiosSecure.get('/instructor/approved-classes', {
           params: { email: currentUser.email }
         });
         
