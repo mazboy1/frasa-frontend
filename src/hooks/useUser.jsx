@@ -1,4 +1,3 @@
-// /src/hooks/useUser.jsx
 import { useEffect, useState } from 'react';
 import useAuth from './useAuth';
 import useAxiosFetch from './useAxiosFetch';
@@ -17,24 +16,18 @@ const useUser = () => {
       
       try {
         if (!user?.email) {
-          console.log('⏳ useUser: No user email available');
           setCurrentUser(null);
           setIsLoading(false);
           return;
         }
 
-        console.log('🔄 useUser: Fetching user data for:', user.email);
+        console.log('🔄 Fetching user data for:', user.email);
         
-        // URL endpoint - pastikan menggunakan /api/user/:email
         const response = await axiosFetch.get(`/api/user/${user.email}`);
         
-        console.log('✅ useUser: API Response:', response.data);
-
         if (response.data?.success && response.data?.data) {
           const userData = response.data.data;
           const role = userData.role || 'user';
-          
-          console.log('🎯 useUser: User role from DB:', role);
           
           setCurrentUser({
             ...userData,
@@ -44,8 +37,6 @@ const useUser = () => {
             photoUrl: userData.photoUrl || user.photoURL || null
           });
         } else {
-          console.warn('⚠️ useUser: No user data found, using auth data');
-          
           setCurrentUser({
             name: user.displayName || user.email?.split('@')[0] || 'User',
             email: user.email,
@@ -55,24 +46,15 @@ const useUser = () => {
           });
         }
       } catch (error) {
-        console.error('❌ useUser: Error fetching user:', error);
+        console.error('❌ Error fetching user:', error);
         
-        // Cek status error
-        if (error.response?.status === 404) {
-          setError('Endpoint user tidak ditemukan. Periksa konfigurasi API.');
-        } else {
-          setError(error.message || 'Failed to load user data');
-        }
-        
-        // Fallback ke data auth
         if (user?.email) {
           setCurrentUser({
             name: user.displayName || user.email?.split('@')[0] || 'User',
             email: user.email,
             role: 'user',
             photoUrl: user.photoURL || null,
-            isFromAuth: true,
-            isError: true
+            isFromAuth: true
           });
         }
       } finally {
@@ -83,11 +65,7 @@ const useUser = () => {
     fetchUserData();
   }, [user, axiosFetch]);
 
-  return { 
-    currentUser, 
-    isLoading, 
-    error
-  };
+  return { currentUser, isLoading, error };
 };
 
 export default useUser;

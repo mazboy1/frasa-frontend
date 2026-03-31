@@ -1,35 +1,30 @@
-// /src/hooks/useAxiosFetch.jsx
+
+// src/hooks/useAxiosFetch.jsx
+import { useEffect } from 'react';
 import axios from 'axios';
 
 const useAxiosFetch = () => {
   const axiosInstance = axios.create({
-    baseURL: 'https://frasa-backend.vercel.app', // TANPA /api
-    timeout: 30000,
-    headers: {
-      'Content-Type': 'application/json',
-    }
+    baseURL: 'https://frasa-backend.vercel.app/api', // <-- pastikan /api
+    // timeout: 10000, // optional
   });
 
-  // Request interceptor untuk menambahkan token
-  axiosInstance.interceptors.request.use(
-    (config) => {
-      const token = localStorage.getItem('token');
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
-      }
-      return config;
-    },
-    (error) => Promise.reject(error)
-  );
+  useEffect(() => {
+    const requestInterceptor = axiosInstance.interceptors.request.use(
+      (config) => config,
+      (error) => Promise.reject(error)
+    );
 
-  // Response interceptor untuk handling error
-  axiosInstance.interceptors.response.use(
-    (response) => response,
-    (error) => {
-      console.error('❌ Axios Error:', error.response?.status, error.response?.data);
-      return Promise.reject(error);
-    }
-  );
+    const responseInterceptor = axiosInstance.interceptors.response.use(
+      (response) => response,
+      (error) => Promise.reject(error)
+    );
+
+    return () => {
+      axiosInstance.interceptors.request.eject(requestInterceptor);
+      axiosInstance.interceptors.response.eject(responseInterceptor);
+    };
+  }, []); // don't include axiosInstance in deps
 
   return axiosInstance;
 };
