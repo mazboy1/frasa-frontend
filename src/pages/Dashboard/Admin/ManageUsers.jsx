@@ -16,23 +16,36 @@ const ManageUsers = () => {
     fetchUsers();
   }, []);
 
-  const fetchUsers = async () => {
-    try {
-      setIsLoading(true);
-      console.log('📊 Fetching all users...');
-      
-      const response = await axiosSecure.get('/users');
-      
-      console.log('✅ Users fetched:', response.data);
-      
-      setUsers(response.data.data || []);
-      setError(null);
-    } catch (err) {
-      console.error('❌ Error fetching users:', err);
-      setError(err.response?.data?.message || err.message || 'Failed to load users');
-    } finally {
-      setIsLoading(false);
-    }
+    const fetchUsers = async () => {
+      try {
+        setIsLoading(true);
+        console.log('📊 Fetching all users...');
+        console.log('Current token:', localStorage.getItem('access-token') || 'NO TOKEN');
+        
+        const response = await axiosSecure.get('/users');
+        
+        console.log('✅ Users fetched:', response.data);
+        
+        setUsers(response.data.data || []);
+        setError(null);
+      } catch (err) {
+        console.error('❌ Error fetching users:', err);
+        console.error('Error response:', err.response?.data);
+        console.error('Error status:', err.response?.status);
+        
+        // Handle 401 - token invalid/expired
+        if (err.response?.status === 401) {
+          setError('Session expired. Please login again');
+          // Redirect to login
+          setTimeout(() => {
+            window.location.href = '/login';
+          }, 2000);
+        } else {
+          setError(err.response?.data?.message || err.message || 'Failed to load users');
+        }
+      } finally {
+        setIsLoading(false);
+      }
   };
 
   const handleRoleChange = async (userId, newRole) => {
