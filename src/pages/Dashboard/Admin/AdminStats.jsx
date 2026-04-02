@@ -5,17 +5,55 @@ import { MdPendingActions, MdPeople } from "react-icons/md";
 
 const AdminStats = ({ users }) => {
   const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const axiosSecure = useAxiosSecure();
 
   useEffect(() => {
-    axiosSecure.get('/admin-stats')
-      .then(res => setData(res.data))
-      .catch(err => console.log(err));
-  }, []);
+    const fetchStats = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const response = await axiosSecure.get('/api/admin-stats');
+        console.log('✅ Admin stats fetched:', response.data);
+        setData(response.data?.data || response.data);
+      } catch (err) {
+        console.error('❌ Error fetching stats:', err);
+        setError(err.response?.data?.message || err.message || 'Gagal mengambil statistik');
+        // Set default values jika error
+        setData({
+          approvedClasses: 0,
+          pendingClasses: 0,
+          instructors: 0
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchStats();
+  }, [axiosSecure]);
+
+  if (loading) {
+    return (
+      <div className="container mx-auto px-4 py-6">
+        <h2 className="text-2xl font-bold text-gray-800 mb-6">Statistik Admin</h2>
+        <div className="flex justify-center items-center h-40">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto px-4 py-6">
       <h2 className="text-2xl font-bold text-gray-800 mb-6">Statistik Admin</h2>
+      
+      {error && (
+        <div className="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded">
+          ⚠️ {error}
+        </div>
+      )}
       
       <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6'>
         {/* Total Member Card */}
