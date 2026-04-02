@@ -1,4 +1,3 @@
-// Login.jsx - FIX LENGKAP
 import React, { useState } from 'react';
 import { 
   MdOutlineRemoveRedEye, 
@@ -55,16 +54,16 @@ const Login = () => {
     try {
       setLocalLoading(true);
 
-      const data = new FormData(e.target);
-      const formData = Object.fromEntries(data);
+      const email = e.target.email.value;
+      const password = e.target.password.value;
       
-      console.log("🔄 Login attempt:", formData.email);
+      console.log("🔄 Login attempt:", email);
       
-      if (!formData.email || !formData.password) {
+      if (!email || !password) {
         throw new Error("Email dan password harus diisi");
       }
 
-      await login(formData.email, formData.password);
+      await login(email, password);
       showSuccessAlert();
       navigate(location.state?.from || "/dashboard");
       
@@ -107,7 +106,7 @@ const Login = () => {
           {error && (
             <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm mb-6 flex items-center">
               <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4v.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
               {error}
             </div>
@@ -118,7 +117,7 @@ const Login = () => {
             <div className="space-y-2">
               <label htmlFor="email" className="text-sm font-medium text-gray-700 flex items-center">
                 <FiMail className="w-4 h-4 mr-2" />
-                Alamat Email
+                Email
               </label>
               <div className={`relative transition-all duration-200 ${
                 isFocused.email ? 'ring-2 ring-secondary ring-opacity-50' : ''
@@ -126,9 +125,9 @@ const Login = () => {
                 <input 
                   type="email" 
                   id="email"
-                  name="email" 
-                  placeholder="email@contoh.com" 
+                  name="email"
                   className="w-full border border-gray-300 rounded-lg px-4 py-3 pl-11 pr-4 text-gray-900 placeholder-gray-500 focus:outline-none focus:border-secondary transition-colors duration-200"
+                  placeholder="Masukkan email Anda"
                   required
                   disabled={loading}
                   onFocus={() => handleFocus('email')}
@@ -150,9 +149,9 @@ const Login = () => {
                 <input 
                   type={showPassword ? 'text' : 'password'} 
                   id="password"
-                  name="password" 
+                  name="password"
+                  className="w-full border border-gray-300 rounded-lg px-4 py-3 pl-11 pr-11 text-gray-900 placeholder-gray-500 focus:outline-none focus:border-secondary transition-colors duration-200"
                   placeholder="Masukkan kata sandi"
-                  className="w-full border border-gray-300 rounded-lg px-4 py-3 pl-11 pr-12 text-gray-900 placeholder-gray-500 focus:outline-none focus:border-secondary transition-colors duration-200"
                   required
                   disabled={loading}
                   onFocus={() => handleFocus('password')}
@@ -162,7 +161,7 @@ const Login = () => {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors duration-200"
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
                   disabled={loading}
                 >
                   {showPassword ? (
@@ -172,30 +171,21 @@ const Login = () => {
                   )}
                 </button>
               </div>
-              <div className="flex justify-end">
-                <Link 
-                  to="/forgot-password" 
-                  className="text-sm text-secondary hover:text-secondary-dark transition-colors duration-200"
-                >
-                  Lupa kata sandi?
-                </Link>
-              </div>
             </div>
 
             {/* Submit Button */}
-            <button 
-              type="submit" 
+            <button
+              type="submit"
               disabled={loading}
-              className={`w-full bg-gradient-to-r from-secondary to-secondary-dark text-white py-3 px-4 rounded-lg font-medium transition-all duration-200 ${
-                loading 
-                  ? 'opacity-70 cursor-not-allowed' 
-                  : 'hover:shadow-lg hover:from-secondary-dark hover:to-secondary'
-              } flex items-center justify-center space-x-2`}
+              className="w-full bg-gradient-to-r from-secondary to-blue-600 hover:from-blue-600 hover:to-secondary disabled:opacity-50 text-white font-bold py-3 px-4 rounded-lg transition duration-200 flex items-center justify-center"
             >
               {loading ? (
                 <>
-                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  <span>Sedang masuk...</span>
+                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Sedang Masuk...
                 </>
               ) : (
                 <span>Masuk ke Akun</span>
@@ -211,7 +201,7 @@ const Login = () => {
           </div>
 
           {/* Google Login */}
-          <GoogleLogin text="Lanjutkan dengan Google" />
+          <GoogleLogin />
 
           {/* Sign Up Link */}
           <div className="text-center mt-6 pt-6 border-t border-gray-100">

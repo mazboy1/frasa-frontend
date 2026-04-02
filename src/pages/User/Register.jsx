@@ -23,13 +23,11 @@ const Register = () => {
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      // validasi tipe
       if (!file.type.startsWith("image/")) {
         Swal.fire("Error!", "File harus berupa gambar", "error");
         e.target.value = "";
         return;
       }
-      // validasi ukuran
       if (file.size > 5 * 1024 * 1024) {
         Swal.fire("Error!", "Ukuran gambar tidak boleh lebih dari 5MB", "error");
         e.target.value = "";
@@ -47,6 +45,7 @@ const Register = () => {
     try {
       if (!image) {
         Swal.fire("Error!", "Harap unggah foto profil", "error");
+        setIsSubmitting(false);
         return;
       }
 
@@ -77,20 +76,28 @@ const Register = () => {
           email: data.email,
           photoURL: photoURL,
           role: 'user',
-          gender: data.gender,
-          phone: data.phoneNumber,
-          address: data.address
+          gender: data.gender || 'not specified',
+          phone: data.phone || 'not specified',
+          address: data.address || 'not specified'
         };
 
-        await axios.post("https://frasa-backend.vercel.app/api/new-user", userImp);
+        console.log('📤 Registering user:', userImp);
 
-        Swal.fire("Berhasil!", "Pendaftaran berhasil!", "success");
-        navigate("/");
+        try {
+          await axios.post("https://frasa-backend.vercel.app/api/new-user", userImp);
+          console.log('✅ User registered successfully');
+        } catch (apiError) {
+          console.error('⚠️ User API error (non-critical):', apiError.message);
+          // Jangan throw, user sudah dibuat di Firebase
+        }
+
+        Swal.fire("Berhasil!", "Pendaftaran berhasil! Silakan login.", "success");
+        navigate("/login");
       }
     } catch (err) {
+      console.error("❌ Registration error:", err);
       setError(err.code || err.message);
-      Swal.fire("Error!", err.message || "Terjadi kesalahan", "error");
-      console.error("Registration error:", err);
+      Swal.fire("Error!", err.message || "Terjadi kesalahan saat registrasi", "error");
     } finally {
       setIsSubmitting(false);
     }
@@ -110,42 +117,30 @@ const Register = () => {
               <label className='block text-sm font-medium text-gray-700 mb-2'>
                 <AiOutlineUser className='inline-block mr-2 text-gray-500'/> Nama Lengkap
               </label>
-              <div className="relative">
-                <input 
-                  type="text" 
-                  {...register("name", { required: "Nama wajib diisi" })} 
-                  className='w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent'
-                  placeholder="Masukkan nama lengkap"
-                />
-                <AiOutlineUser className='absolute left-3 top-3 text-gray-400'/>
-              </div>
+              <input 
+                type="text" 
+                {...register("name", { required: "Nama wajib diisi" })} 
+                className='w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+                placeholder="Masukkan nama lengkap"
+              />
               {errors.name && <p className='text-red-500 text-xs mt-1'>{errors.name.message}</p>}
             </div>
-            
+
             <div className='flex-1'>
               <label className='block text-sm font-medium text-gray-700 mb-2'>
                 <AiOutlineMail className='inline-block mr-2 text-gray-500'/> Email
               </label>
-              <div className="relative">
-                <input 
-                  type="email" 
-                  {...register("email", { 
-                    required: "Email wajib diisi",
-                    pattern: {
-                      value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                      message: "Email tidak valid"
-                    }
-                  })} 
-                  className='w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent'
-                  placeholder="Masukkan alamat email"
-                />
-                <AiOutlineMail className='absolute left-3 top-3 text-gray-400'/>
-              </div>
+              <input 
+                type="email" 
+                {...register("email", { required: "Email wajib diisi", pattern: { value: /^\S+@\S+$/i, message: "Email tidak valid" } })} 
+                className='w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+                placeholder="Masukkan email"
+              />
               {errors.email && <p className='text-red-500 text-xs mt-1'>{errors.email.message}</p>}
             </div>
           </div>
 
-          {/* Password & Konfirmasi Password */}
+          {/* Password & Confirm Password */}
           <div className='flex flex-col md:flex-row gap-6 mb-5'>
             <div className='flex-1'>
               <label className='block text-sm font-medium text-gray-700 mb-2'>
@@ -154,7 +149,7 @@ const Register = () => {
               <div className="relative">
                 <input 
                   type="password" 
-                  {...register("password", { required: "Kata sandi wajib diisi" })} 
+                  {...register("password", { required: "Kata sandi wajib diisi", minLength: { value: 6, message: "Minimal 6 karakter" } })} 
                   className='w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent'
                   placeholder="Buat kata sandi"
                 />
@@ -171,6 +166,7 @@ const Register = () => {
                 <input 
                   type="password" 
                   {...register("confirmPassword", { 
+                    required: "Konfirmasi kata sandi wajib diisi",
                     validate: v => v === password || "Kata sandi tidak cocok" 
                   })} 
                   className='w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent'
@@ -188,30 +184,24 @@ const Register = () => {
               <label className='block text-sm font-medium text-gray-700 mb-2'>
                 <AiOutlinePhone className='inline-block mr-2 text-gray-500'/> Nomor Telepon
               </label>
-              <div className="relative">
-                <input 
-                  type="text" 
-                  {...register("phoneNumber", { required: "Nomor telepon wajib diisi" })} 
-                  className='w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent'
-                  placeholder="Masukkan nomor telepon"
-                />
-                <AiOutlinePhone className='absolute left-3 top-3 text-gray-400'/>
-              </div>
-              {errors.phoneNumber && <p className='text-red-500 text-xs mt-1'>{errors.phoneNumber.message}</p>}
+              <input 
+                type="text" 
+                {...register("phone")} 
+                className='w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+                placeholder="08..."
+              />
             </div>
-            
+
             <div className='flex-1'>
               <label className='block text-sm font-medium text-gray-700 mb-2'>
                 <AiOutlinePicture className='inline-block mr-2 text-gray-500'/> Foto Profil
               </label>
-              <div className="relative">
-                <input 
-                  type="file" 
-                  accept="image/*" 
-                  onChange={handleImageChange} 
-                  className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                />
-              </div>
+              <input 
+                type="file" 
+                accept="image/*"
+                onChange={handleImageChange}
+                className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+              />
               {preview && (
                 <div className="mt-2">
                   <img src={preview} alt="preview" className="w-16 h-16 object-cover rounded-md border"/>
@@ -226,49 +216,36 @@ const Register = () => {
             <div className='flex-1'>
               <label className='block text-sm font-medium text-gray-700 mb-2'>Jenis Kelamin</label>
               <select 
-                {...register("gender", { required: "Pilih jenis kelamin" })} 
-                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                {...register("gender")} 
+                className='w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent'
               >
-                <option value="">Pilih Jenis Kelamin</option>
-                <option value="female">Perempuan</option>
+                <option value="">Pilih jenis kelamin</option>
                 <option value="male">Laki-laki</option>
+                <option value="female">Perempuan</option>
                 <option value="other">Lainnya</option>
               </select>
-              {errors.gender && <p className='text-red-500 text-xs mt-1'>{errors.gender.message}</p>}
             </div>
-            
+
             <div className='flex-1'>
               <label className='block text-sm font-medium text-gray-700 mb-2'>Alamat</label>
-              <textarea 
-                {...register("address", { required: "Alamat wajib diisi" })} 
-                rows="3" 
-                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Masukkan alamat lengkap"
+              <input 
+                type="text" 
+                {...register("address")} 
+                className='w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+                placeholder="Masukkan alamat"
               />
-              {errors.address && <p className='text-red-500 text-xs mt-1'>{errors.address.message}</p>}
             </div>
           </div>
 
-          {/* Tombol Daftar */}
-          <div className="text-center mt-6">
-            <button 
-              type='submit' 
-              className={`w-full md:w-auto bg-blue-600 hover:bg-blue-700 text-white py-2.5 px-6 rounded-lg transition-colors ${isSubmitting ? "opacity-70 cursor-not-allowed" : ""}`}
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? "Mendaftarkan..." : "Daftar"}
-            </button>
-          </div>
+          {/* Submit Button */}
+          <button 
+            type="submit" 
+            disabled={isSubmitting}
+            className='w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold py-3 px-4 rounded-lg transition duration-200 mt-6'
+          >
+            {isSubmitting ? 'Membuat Akun...' : 'Buat Akun'}
+          </button>
         </form>
-
-        <div className="relative my-6">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-gray-300"></div>
-          </div>
-          <div className="relative flex justify-center text-sm">
-            <span className="px-2 bg-white text-gray-500">Atau</span>
-          </div>
-        </div>
 
         <GoogleLogin />
 
