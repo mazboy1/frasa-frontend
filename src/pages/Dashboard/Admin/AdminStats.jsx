@@ -10,28 +10,22 @@ const AdminStats = ({ users }) => {
   const axiosSecure = useAxiosSecure();
 
   useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        setLoading(true);
+    axiosSecure.get('/admin-stats')
+      .then(res => {
+        console.log('✅ Admin stats:', res.data);
+        setData(res.data?.data || res.data);
         setError(null);
-        const response = await axiosSecure.get('/admin-stats');
-        console.log('✅ Admin stats fetched:', response.data);
-        setData(response.data?.data || response.data);
-      } catch (err) {
+      })
+      .catch(err => {
         console.error('❌ Error fetching stats:', err);
-        setError(err.response?.data?.message || err.message || 'Gagal mengambil statistik');
-        // Set default values jika error
+        setError(err.response?.data?.message || 'Gagal mengambil statistik');
         setData({
           approvedClasses: 0,
           pendingClasses: 0,
           instructors: 0
         });
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchStats();
+      })
+      .finally(() => setLoading(false));
   }, [axiosSecure]);
 
   if (loading) {
