@@ -89,9 +89,14 @@ const ApprovedCourse = () => {
     navigate('/dashboard/add-class');
   };
 
-  // Hitung total students dan revenue
-  const totalStudents = approvedClasses.reduce((total, cls) => total + (cls.totalEnrolled || 0), 0);
-  const totalRevenue = approvedClasses.reduce((total, cls) => total + (cls.price * (cls.totalEnrolled || 0)), 0);
+  // ✅ FIX: Hitung total students dan revenue dengan pengecekan array
+  const totalStudents = Array.isArray(approvedClasses)
+    ? approvedClasses.reduce((total, cls) => total + (cls.totalEnrolled || 0), 0)
+    : 0;
+  
+  const totalRevenue = Array.isArray(approvedClasses)
+    ? approvedClasses.reduce((total, cls) => total + (cls.price * (cls.totalEnrolled || 0)), 0)
+    : 0;
 
   if (isLoading) {
     return (

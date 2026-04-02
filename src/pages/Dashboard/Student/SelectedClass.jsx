@@ -35,7 +35,7 @@ const SelectedClass = () => {
       .then((res) => {
         console.log('✅ Cart fetched:', res.data);
         
-        // Ensure data is always an array
+        // ✅ FIX: Ensure data is always an array
         const cartData = Array.isArray(res.data) ? res.data : res.data?.data ? res.data.data : [];
         setClasses(cartData);
         setError(null);
