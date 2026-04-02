@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import useAxiosSecure from '../../../hooks/useAxiosSecure';
 import useUser from '../../../hooks/useUser';
-import SectionTitle from '../../../components/SectionTitle';
+import SectioniTitle from '../../../components/SectioniTitle';
 import { useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
 
@@ -148,7 +148,7 @@ const SelectedClass = () => {
   if (error && classes.length === 0) {
     return (
       <div className="px-4 py-8">
-        <SectionTitle
+        <SectioniTitle
           heading="Kelas Pilihan Saya"
           subHeading="Kelola kelas dalam keranjang Anda"
         />
@@ -167,7 +167,7 @@ const SelectedClass = () => {
 
   return (
     <div className="px-4 py-8">
-      <SectionTitle
+      <SectioniTitle
         heading="🛒 Kelas Pilihan Saya"
         subHeading="Kelola kelas dalam keranjang Anda"
       />
