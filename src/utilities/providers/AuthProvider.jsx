@@ -1,6 +1,5 @@
-import React, { useEffect, useState } from "react";
-import { createContext } from "react";
-import app from "../../../firebase.config";
+import React, { createContext, useEffect, useState } from 'react';
+import { app } from '../../config/firebase.init';  // ✅ CORRECT IMPORT
 import {
   getAuth,
   createUserWithEmailAndPassword,
@@ -97,14 +96,12 @@ const AuthProvider = ({ children }) => {
         .then((response) => {
           console.log('✅ Response dari /api/set-token:', response.data);
           
-          // ✅ FIX: Ambil token dari response.data.token (bukan response.data.data.token)
           const token = response.data?.token;
           
           if (token) {
             localStorage.setItem('access-token', token);
             localStorage.setItem('token', token);
             console.log('✅ Token berhasil disimpan ke localStorage');
-            console.log('Token length:', token.length);
           } else {
             console.error('❌ Token tidak ditemukan di response:', response.data);
           }
