@@ -14,7 +14,7 @@ const AdminStats = ({ users }) => {
       try {
         setLoading(true);
         setError(null);
-        const response = await axiosSecure.get('/api/admin-stats');
+        const response = await axiosSecure.get('/admin-stats');
         console.log('✅ Admin stats fetched:', response.data);
         setData(response.data?.data || response.data);
       } catch (err) {
