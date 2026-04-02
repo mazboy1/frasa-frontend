@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import useAxiosSecure from '../../../hooks/useAxiosSecure';
 import Swal from 'sweetalert2';
-import SectionTitle from '../../../components/SectioniTitle';
-// import SectionTitle from '../../../components/SectioniTitle';
+import SectionTitle from '../../../components/SectionTitle';
+// import SectionTitle from '../../../components/SectionTitle';
 
 const FeedbackForm = () => {
   const { id } = useParams();
