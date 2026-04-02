@@ -10,6 +10,9 @@ const AdminStats = ({ users }) => {
   const axiosSecure = useAxiosSecure();
 
   useEffect(() => {
+    const token = localStorage.getItem('token');
+    console.log('🔑 Token check in AdminStats:', token ? `✅ (${token.length} chars)` : '❌ MISSING');
+    
     axiosSecure.get('/admin-stats')
       .then(res => {
         console.log('✅ Admin stats:', res.data);
@@ -17,7 +20,7 @@ const AdminStats = ({ users }) => {
         setError(null);
       })
       .catch(err => {
-        console.error('❌ Error fetching stats:', err);
+        console.error('❌ Error fetching stats:', err.response?.status, err.response?.data);
         setError(err.response?.data?.message || 'Gagal mengambil statistik');
         setData({
           approvedClasses: 0,

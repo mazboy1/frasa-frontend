@@ -1,5 +1,6 @@
-import React, { createContext, useEffect, useState } from 'react';
-import { app } from '../../config/firebase.init';
+import React, { useEffect, useState } from "react";
+import { createContext } from "react";
+import app from "../../../firebase.config";
 import {
   getAuth,
   createUserWithEmailAndPassword,
@@ -12,7 +13,6 @@ import {
 } from "firebase/auth";
 import axios from 'axios';
 
-// ✅ EXPORT AuthContext
 export const AuthContext = createContext(null);
 
 const AuthProvider = ({ children }) => {
@@ -86,27 +86,27 @@ const AuthProvider = ({ children }) => {
       setUser(currentUser);
 
       if (currentUser) {
-        // ✅ FIX: Pastikan name punya value
         const displayName = currentUser.displayName || currentUser.email.split('@')[0] || 'User';
         
-        console.log('📤 Calling /api/set-token with:', {
-          email: currentUser.email,
-          name: displayName
-        });
+        console.log('📤 Calling /api/set-token dengan email:', currentUser.email);
 
         axios.post("https://frasa-backend.vercel.app/api/set-token", {
           email: currentUser.email,
           name: displayName
         })
         .then((response) => {
-          console.log('✅ Token received:', response.data.token ? '✓' : '✗');
+          console.log('✅ Response dari /api/set-token:', response.data);
           
-          if (response.data.token) {
-            // ✅ PENTING: Store dengan nama yang benar
-            localStorage.setItem('access-token', response.data.token);
-            localStorage.setItem('token', response.data.token);
-            
-            console.log('💾 Token stored in localStorage');
+          // ✅ FIX: Ambil token dari response.data.token (bukan response.data.data.token)
+          const token = response.data?.token;
+          
+          if (token) {
+            localStorage.setItem('access-token', token);
+            localStorage.setItem('token', token);
+            console.log('✅ Token berhasil disimpan ke localStorage');
+            console.log('Token length:', token.length);
+          } else {
+            console.error('❌ Token tidak ditemukan di response:', response.data);
           }
           setLoading(false);
         })

@@ -11,13 +11,16 @@ const AdminHome = () => {
   const [error, setError] = useState(null);
 
   useEffect(() => {
+    const token = localStorage.getItem('token');
+    console.log('🔑 Token check in AdminHome:', token ? `✅ (${token.length} chars)` : '❌ MISSING');
+    
     axiosSecure.get('/users')
       .then(res => {
+        console.log('✅ Users fetched:', res.data)
         setUsers(res.data?.data || [])
-        console.log('✅ Users fetched:', res.data?.data)
       })
       .catch(err => {
-        console.error('❌ Error fetching users:', err)
+        console.error('❌ Error fetching users:', err.response?.status, err.response?.data)
         setError(err.response?.data?.message || 'Gagal memuat user list')
       })
       .finally(() => setLoading(false))
