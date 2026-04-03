@@ -34,7 +34,7 @@ const instructorNavItem = [
 
 const students = [
   {to: "/dashboard/student-cp", icon: <BiHomeAlt className="text-2xl" />, label: "Beranda"},
-  {to: "/dashboard/enrolled-classes", icon: <SiGoogleclassroom className="text-2xl" />,label: "Kelas Saya"},
+  {to: "/dashboard/enrolled-aja", icon: <SiGoogleclassroom className="text-2xl" />,label: "Kelas Saya"},
   {to: "/dashboard/my-selected", icon: <BiSelectMultiple className="text-2xl" />, label: "Kelas Dipilih"},
   {to: "/dashboard/my-payments", icon: <MdPayments className="text-2xl" />, label: "Riwayat Pembayaran"},
   {to: "/dashboard/apply-instructor", icon: <SiInstructure className="text-2xl" />, label: "Daftar Instruktur"}
