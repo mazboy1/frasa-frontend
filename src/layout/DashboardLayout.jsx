@@ -1,295 +1,43 @@
-// /src/layout/DashboardLayout.jsx - FINAL FIXED VERSION
-import React, { useState, useEffect } from 'react';
-import useAuth from '../hooks/useAuth';
-import useUser from '../hooks/useUser';
-import { BiHomeAlt, BiLogInCircle, BiSelectMultiple } from "react-icons/bi";
-import { FaHome, FaUsers } from "react-icons/fa";
-import { IoSchoolSharp } from "react-icons/io5";
-import { IoMdDoneAll } from "react-icons/io";
-import { BsFillPostcardFill } from 'react-icons/bs';
-import { SiGoogleclassroom, SiInstructure } from 'react-icons/si';
-import { TbBrandAppleArcade } from 'react-icons/tb';
-import { MdExplore, MdOfflineBolt, MdPayments, MdPendingActions } from 'react-icons/md';
-import { GiFigurehead } from 'react-icons/gi';
-import { NavLink, useNavigate, Link, Outlet } from 'react-router-dom';
-import Swal from 'sweetalert2';
-import Scroll from '../hooks/useScroll';
-import { HashLoader } from 'react-spinners';
-import DebugRole from '../components/DebugRole'; // Import debug component
-
-const adminNavItems = [
-  { to: "/dashboard/admin-home", icon: <BiHomeAlt className="text-2xl" />, label: "Beranda Admin" },
-  { to: "/dashboard/manage-users", icon: <FaUsers className="text-2xl" />, label: "Kelola Pengguna" },
-  { to: "/dashboard/manage-class", icon: <BsFillPostcardFill className="text-2xl" />, label: "Kelola Kelas" },
-  { to: "/dashboard/manage-applications", icon: <TbBrandAppleArcade className="text-2xl" />, label: "Aplikasi" }
-];
-
-const instructorNavItem = [
-  { to: "/dashboard/instructor-cp", icon: <FaHome className="text-2xl"/>, label: "Beranda"},
-  { to: "/dashboard/add-class", icon: <MdExplore className="text-2xl"/>, label: "Tambah Kelas"},
-  { to: "/dashboard/my-classes", icon: <IoSchoolSharp className="text-2xl"/>, label: "Kelas Saya"},
-  { to: "/dashboard/my-pending", icon: <MdPendingActions className="text-2xl"/>, label: "Kelas Tertunda"},
-  { to: "/dashboard/my-approved", icon: <IoMdDoneAll className="text-2xl"/>, label: "Kelas Disetujui"},
-];
-
-const students = [
-  {to: "/dashboard/student-cp", icon: <BiHomeAlt className="text-2xl" />, label: "Beranda"},
-  {to: "/dashboard/enrolled-class", icon: <SiGoogleclassroom className="text-2xl" />,label: "Kelas Saya"},
-  {to: "/dashboard/my-selected", icon: <BiSelectMultiple className="text-2xl" />, label: "Kelas Dipilih"},
-  {to: "/dashboard/my-payments", icon: <MdPayments className="text-2xl" />, label: "Riwayat Pembayaran"},
-  {to: "/dashboard/apply-instructor", icon: <SiInstructure className="text-2xl" />, label: "Daftar Instruktur"}
-];
-
-const lastMenuItems = [
-  {
-    to: "/",
-    icon: <BiHomeAlt className="text-2xl" />,
-    label: "Beranda Utama",
-  },
-  { 
-    to: "/trending", 
-    icon: <MdOfflineBolt className="text-2xl" />, 
-    label: "Trending" 
-  },
-  { 
-    to: "/browse", 
-    icon: <GiFigurehead className="text-2xl" />, 
-    label: "Mengikuti" 
-  },
-];
+import { Outlet } from "react-router-dom";
+import useAuth from "../hooks/useAuth";
+import Sidebar from "../components/Sidebar";
+import { useNavigate } from "react-router-dom";
+import { useEffect } from "react";
 
 const DashboardLayout = () => {
-  const [open, setOpen] = useState(true);
-  const { logout } = useAuth();
-  const { currentUser, isLoading: userLoading, refreshUser } = useUser();
-  const role = currentUser?.role?.toLowerCase() || '';
+  const { user, loading, authInitialized } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
-    console.log('📊 DashboardLayout - Current Role:', role);
-    console.log('📊 DashboardLayout - User Data:', currentUser);
-  }, [role, currentUser]);
-
-  const handleLogOut = async () => {
-    const result = await Swal.fire({
-      title: "Apakah Anda yakin?",
-      text: "Anda akan keluar dari sistem!",
-      icon: "warning",
-      showCancelButton: true,
-      confirmButtonColor: "#3085d6",
-      cancelButtonColor: "#d33",
-      confirmButtonText: "Ya, Keluar!"
-    });
-
-    if (result.isConfirmed) {
-      try {
-        await logout();
-        localStorage.removeItem('token');
-        
-        Swal.fire({
-          title: "Berhasil Keluar",
-          text: "Anda telah keluar dari sistem.",
-          icon: "success"
-        });
-        
-        navigate("/");
-      } catch (err) {
-        console.error('Logout error:', err);
-        Swal.fire({
-          title: "Error",
-          text: "Gagal keluar dari sistem",
-          icon: "error"
-        });
-      }
+    // ✅ FIX: Wait untuk authInitialized sebelum redirect
+    if (authInitialized && !loading && !user) {
+      console.warn('⚠️ User tidak authenticated, redirect ke login');
+      navigate('/login');
     }
-  };
+  }, [user, loading, authInitialized, navigate]);
 
-  if (userLoading) {
+  // ✅ FIX: Show loading hanya selama auth belum initialized
+  if (!authInitialized || loading) {
     return (
-      <div className='flex justify-center items-center h-screen'>
-        <HashLoader color="#36d7b7" size={50}/>
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Authenticating...</p>
+        </div>
       </div>
     );
   }
 
-  if (!currentUser) {
-    navigate('/login');
-    return null;
+  // ✅ FIX: Only show dashboard jika user sudah authenticated
+  if (!user) {
+    return null; // Di-handle oleh useEffect redirect
   }
 
-  const renderSidebarContent = () => {
-    switch(role) {
-      case 'admin':
-        return (
-          <ul className="pt-6">
-            <p className={`ml-3 text-gray-500 ${!open && "hidden"}`}>
-              <small>MENU ADMIN</small>
-            </p>
-            {adminNavItems.map((menuItem, index) => (
-              <li key={index} className="mb-2">
-                <NavLink
-                  to={menuItem.to}
-                  className={({ isActive }) =>
-                    `flex ${
-                      isActive ? "bg-primary text-white" : "text-[#413F44]"
-                    } duration-150 rounded-md p-2 cursor-pointer hover:bg-secondary hover:text-white font-bold text-sm items-center gap-x-4`
-                  }
-                >
-                  {menuItem.icon}
-                  <span className={`${!open && "hidden"} origin-left duration-200`}>
-                    {menuItem.label}
-                  </span>
-                </NavLink>
-              </li>
-            ))}
-          </ul>
-        );
-
-      case 'instructor':
-        return (
-          <ul className="pt-6">
-            <p className={`ml-3 text-gray-500 ${!open && "hidden"}`}>
-              <small>MENU INSTRUKTUR</small>
-            </p>
-            {instructorNavItem.map((menuItem, index) => (
-              <li key={index} className="mb-2">
-                <NavLink
-                  to={menuItem.to}
-                  className={({ isActive }) =>
-                    `flex ${
-                      isActive ? "bg-primary text-white" : "text-[#413F44]"
-                    } duration-150 rounded-md p-2 cursor-pointer hover:bg-secondary hover:text-white font-bold text-sm items-center gap-x-4`
-                  }
-                >
-                  {menuItem.icon}
-                  <span className={`${!open && "hidden"} origin-left duration-200`}>
-                    {menuItem.label}
-                  </span>
-                </NavLink>
-              </li>
-            ))}
-          </ul>
-        );
-
-      case 'user':
-      case 'student':
-        return (
-          <ul className="pt-6">
-            <p className={`ml-3 text-gray-500 ${!open && "hidden"}`}>
-              <small>MENU SISWA</small>
-            </p>
-            {students.map((menuItem, index) => (
-              <li key={index} className="mb-2">
-                <NavLink
-                  to={menuItem.to}
-                  className={({ isActive }) =>
-                    `flex ${
-                      isActive ? "bg-primary text-white" : "text-[#413F44]"
-                    } duration-150 rounded-md p-2 cursor-pointer hover:bg-secondary hover:text-white font-bold text-sm items-center gap-x-4`
-                  }
-                >
-                  {menuItem.icon}
-                  <span className={`${!open && "hidden"} origin-left duration-200`}>
-                    {menuItem.label}
-                  </span>
-                </NavLink>
-              </li>
-            ))}
-          </ul>
-        );
-
-      default:
-        console.warn(`Unknown role: ${role}, showing default menu`);
-        return (
-          <ul className="pt-6">
-            <p className={`ml-3 text-gray-500 ${!open && "hidden"}`}>
-              <small>MENU</small>
-            </p>
-            {students.map((menuItem, index) => (
-              <li key={index} className="mb-2">
-                <NavLink
-                  to={menuItem.to}
-                  className={({ isActive }) =>
-                    `flex ${
-                      isActive ? "bg-primary text-white" : "text-[#413F44]"
-                    } duration-150 rounded-md p-2 cursor-pointer hover:bg-secondary hover:text-white font-bold text-sm items-center gap-x-4`
-                  }
-                >
-                  {menuItem.icon}
-                  <span className={`${!open && "hidden"} origin-left duration-200`}>
-                    {menuItem.label}
-                  </span>
-                </NavLink>
-              </li>
-            ))}
-          </ul>
-        );
-    }
-  };
-
   return (
-    <div className='flex'>
-      {/* Sidebar */}
-      <div className={`${open ? "w-72 overflow-y-auto" : "w-[90px] overflow-auto"} bg-white h-screen p-5 md:block hidden pt-8 relative duration-300`}>
-        <div className='flex gap-x-4 items-center'>
-          <img 
-            onClick={() => setOpen(!open)} 
-            src="/frasa-logo.png" 
-            alt="Logo" 
-            className={`cursor-pointer h-[40px] duration-500 ${open && "rotate-[360deg]"}`}
-          />
-          <Link to="/">
-            <h1 
-              onClick={() => setOpen(!open)} 
-              className={`text-dark-primary cursor-pointer font-bold origin-left text-xl duration-200 ${!open && "scale-0"}`}
-            >
-              Frasa ID
-            </h1>
-          </Link>
-        </div>
-
-        {renderSidebarContent()}
-
-        <ul className='pt-6 border-t mt-6'>
-          <p className={`ml-3 text-gray-500 uppercase mb-3 ${!open && "hidden"}`}>
-            <small>Link</small>
-          </p>
-          {lastMenuItems.map((menuItem, index) => (
-            <li key={index} className="mb-2">
-              <NavLink
-                to={menuItem.to}
-                className={({ isActive }) =>
-                  `flex ${
-                    isActive ? "bg-primary text-white" : "text-[#413F44]"
-                  } duration-150 rounded-md p-2 cursor-pointer hover:bg-secondary hover:text-white font-bold text-sm items-center gap-x-4`
-                }
-              >
-                {menuItem.icon}
-                <span className={`${!open && "hidden"} origin-left duration-200`}>
-                  {menuItem.label}
-                </span>
-              </NavLink>
-            </li>
-          ))}
-          <li>
-            <button                        
-              onClick={handleLogOut}
-              className="flex duration-150 rounded-md p-2 cursor-pointer hover:bg-secondary hover:text-white font-bold text-sm items-center gap-x-4 w-full text-left"
-            >
-              <BiLogInCircle className='text-2xl'/>
-              <span className={`${!open && "hidden"} origin-left duration-200`}>
-                Keluar
-              </span>
-            </button>
-          </li>
-        </ul>
-      </div>
-      
-      {/* Main Content */}
-      <div className='h-screen overflow-y-auto px-8 flex-1'>
-        <Scroll/>
+    <div className="flex gap-4 bg-gray-100 min-h-screen p-4">
+      <Sidebar/>
+      <div className="flex-1">
         <Outlet/>
-        <DebugRole />
       </div>
     </div>
   );
