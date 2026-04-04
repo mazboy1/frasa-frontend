@@ -61,7 +61,8 @@ const AsInstructor = () => {
       
       // Try with axiosSecure first (dengan JWT)
       try {
-        const res = await axiosSecure.post(`/api/as-instructor`, data);
+        // ✅ FIX: Remove /api prefix - axiosSecure already adds it
+        const res = await axiosSecure.post(`/as-instructor`, data);
         console.log('✅ Success (axiosSecure):', res.data);
         
         Swal.fire({
@@ -117,12 +118,14 @@ const AsInstructor = () => {
         console.log('🔍 Checking application status for:', currentUser.email);
         
         try {
-          const res = await axiosSecure.get(`/api/applied-instructors/${currentUser.email}`);
+          // ✅ FIX: Remove /api prefix
+          const res = await axiosSecure.get(`/applied-instructors/${currentUser.email}`);
           console.log('✅ Application status (axiosSecure):', res.data);
           setSubmittedData(res.data?.data || res.data);
         } catch (err) {
           console.warn('⚠️ axiosSecure failed, trying axiosFetch...');
           
+          // ✅ FIX: Remove /api prefix
           const res = await axiosFetch.get(`/applied-instructors/${currentUser.email}`);
           console.log('✅ Application status (axiosFetch):', res.data);
           setSubmittedData(res.data?.data || res.data);
