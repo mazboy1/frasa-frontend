@@ -7,7 +7,7 @@ const useAxiosSecure = () => {
   
   const axiosInstance = useMemo(() => {
     return axios.create({
-      baseURL: 'https://frasa-backend.vercel.app/api/',
+      baseURL: 'https://frasa-backend.vercel.app/',
     });
   }, []);
 
