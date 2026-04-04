@@ -5,6 +5,7 @@ import useAuth from './useAuth';
 const useAxiosSecure = () => {
   const { logout } = useAuth();
   
+  // ✅ PENTING: baseURL dengan trailing slash, TANPA /api/
   const axiosInstance = useMemo(() => {
     return axios.create({
       baseURL: 'https://frasa-backend.vercel.app/',
@@ -12,20 +13,17 @@ const useAxiosSecure = () => {
   }, []);
 
   useEffect(() => {
-    // Request Interceptor - Tambah token
     const requestInterceptor = axiosInstance.interceptors.request.use(
       (config) => {
         const token = localStorage.getItem('token');
         
-        // 🔧 DEBUG: Log token
-        console.log('🔐 [useAxiosSecure] Token from localStorage:', token ? '✅ Found' : '❌ Not Found');
-        console.log('📤 [useAxiosSecure] Request to:', config.baseURL + config.url);
+        console.log('📤 [Axios Request]:', {
+          fullURL: config.baseURL + config.url,
+          hasToken: !!token
+        });
         
         if (token) {
           config.headers.Authorization = `Bearer ${token}`;
-          console.log('✅ [useAxiosSecure] Authorization header set');
-        } else {
-          console.warn('⚠️ [useAxiosSecure] No token found in localStorage!');
         }
         
         return config;
@@ -33,14 +31,10 @@ const useAxiosSecure = () => {
       (error) => Promise.reject(error)
     );
 
-    // Response Interceptor - Handle error
     const responseInterceptor = axiosInstance.interceptors.response.use(
       (response) => response,
       async (error) => {
-        console.error('❌ [useAxiosSecure] Response error:', error.response?.status, error.response?.data);
-        
         if (error.response?.status === 401 || error.response?.status === 403) {
-          console.log('🔴 [useAxiosSecure] Unauthorized - logging out');
           await logout();
         }
         return Promise.reject(error);
