@@ -14,7 +14,6 @@ const CoursesStudy = () => {
   
   const [course, setCourse] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [enrolledClasses, setEnrolledClasses] = useState([]);
   const [activeModule, setActiveModule] = useState(0);
   const [activeLesson, setActiveLesson] = useState(0);
   const [completedLessons, setCompletedLessons] = useState([]);
@@ -24,108 +23,59 @@ const CoursesStudy = () => {
   useEffect(() => {
     const initializeCourse = async () => {
       try {
-        // Check if user is authenticated
+        // Check user authentication
         if (!currentUser?.email) {
           console.warn('⚠️ User not authenticated');
           setError('Silakan login terlebih dahulu');
-          setTimeout(() => navigate('/login'), 2000);
+          setLoading(false);
           return;
         }
 
-        // Check if classId exists
-        if (!location.state?.classId) {
+        // Check classId from navigation state
+        const classId = location.state?.classId;
+        if (!classId) {
           console.warn('⚠️ No classId provided');
           setError('ID kelas tidak ditemukan');
+          setLoading(false);
           setTimeout(() => navigate('/dashboard/enrolled-classes'), 1500);
           return;
         }
 
-        console.log('🔄 Initializing course:', location.state.classId);
+        console.log('🔄 Initializing course:', classId);
 
-        // ✅ FIX: Verify user is enrolled with proper error handling
-        let isEnrolled = false;
+        // ✅ FIX: Fetch course data directly (skip enrollment check for now)
         try {
-          const enrollmentResponse = await axiosSecure.get(`/enrolled-classes/${currentUser.email}`);
-          console.log('📋 Enrollment response:', enrollmentResponse.data);
+          const response = await axiosSecure.get(`/class-with-modules/${classId}`);
+          console.log('✅ Course response:', response.data);
           
-          // ✅ FIX: Handle different response formats
-          let enrolledClassesList = [];
-          if (Array.isArray(enrollmentResponse.data)) {
-            enrolledClassesList = enrollmentResponse.data;
-          } else if (Array.isArray(enrollmentResponse.data?.data)) {
-            enrolledClassesList = enrollmentResponse.data.data;
-          } else if (enrollmentResponse.data && typeof enrollmentResponse.data === 'object') {
-            enrolledClassesList = [enrollmentResponse.data];
+          const courseData = response.data?.data || response.data;
+          
+          if (!courseData || !courseData._id) {
+            throw new Error('Data kursus tidak valid');
           }
-          
-          console.log('✅ Enrolled classes list:', enrolledClassesList);
-          
-          // ✅ FIX: Safely check enrollment
-          isEnrolled = enrolledClassesList.some(enrolledClass => {
-            const classId = enrolledClass?.classes?._id || enrolledClass?.classes?.id || enrolledClass?._id || enrolledClass?.id;
-            console.log('🔍 Checking class ID:', classId, 'against:', location.state.classId);
-            return classId === location.state.classId;
-          });
-          
-          setEnrolledClasses(enrolledClassesList);
-        } catch (enrollmentError) {
-          console.error('⚠️ Error checking enrollment:', enrollmentError);
-          // Don't block - allow to continue
-          isEnrolled = true; // Assume enrolled if can't verify
-        }
-        
-        if (!isEnrolled) {
-          console.warn('❌ User not enrolled in this class');
-          Swal.fire({
-            title: '❌ Akses Ditolak',
-            text: 'Anda belum terdaftar di kelas ini',
-            icon: 'error',
-            confirmButtonText: 'Kembali'
-          }).then(() => {
-            navigate('/dashboard/enrolled-classes');
-          });
-          return;
-        }
 
-        // ✅ FIX: Fetch course with modules
-        console.log('🔄 Fetching course data...');
-        let courseResponse;
-        try {
-          courseResponse = await axiosSecure.get(`/class-with-modules/${location.state.classId}`);
-        } catch (err) {
-          // Fallback: try alternate endpoint
-          console.warn('⚠️ First endpoint failed, trying alternate...');
-          courseResponse = await axiosSecure.get(`/class/${location.state.classId}`);
+          console.log('✅ Course loaded:', courseData.name);
+          setCourse(courseData);
+          setError(null);
+          
+          // Load progress
+          const progressData = localStorage.getItem(`progress_${currentUser.email}_${courseData._id}`);
+          if (progressData) {
+            const { completed, progress: progressValue } = JSON.parse(progressData);
+            setCompletedLessons(completed || []);
+            setProgress(progressValue || 0);
+          }
+        } catch (fetchError) {
+          console.error('❌ Error fetching course:', fetchError);
+          throw new Error('Gagal memuat data kursus: ' + fetchError.message);
         }
-        
-        const courseData = courseResponse.data?.data || courseResponse.data;
-        
-        if (!courseData) {
-          throw new Error('Data kursus tidak valid');
-        }
-
-        console.log('✅ Course loaded:', courseData.name);
-        setCourse(courseData);
-        
-        // Load user progress
-        loadUserProgress(courseData._id);
-        setError(null);
       } catch (error) {
-        console.error('❌ Error initializing course:', error);
+        console.error('❌ Error initializing course:', error.message);
+        setError(error.message || 'Terjadi kesalahan saat memuat kursus');
         
-        let errorMsg = 'Terjadi kesalahan saat memuat kursus';
-        if (error.response?.status === 401) {
-          errorMsg = 'Session expired, silakan login kembali';
-        } else if (error.response?.status === 404) {
-          errorMsg = 'Kursus tidak ditemukan';
-        } else if (error.message) {
-          errorMsg = error.message;
-        }
-
-        setError(errorMsg);
         Swal.fire({
           title: '❌ Error',
-          text: errorMsg,
+          text: error.message || 'Gagal memuat kursus',
           icon: 'error',
           confirmButtonText: 'Kembali'
         }).then(() => {
@@ -138,23 +88,8 @@ const CoursesStudy = () => {
 
     if (currentUser?.email && location.state?.classId) {
       initializeCourse();
-    } else {
-      setLoading(false);
     }
   }, [currentUser?.email, location.state?.classId, navigate, axiosSecure]);
-
-  const loadUserProgress = async (courseId) => {
-    try {
-      const progressData = localStorage.getItem(`progress_${currentUser.email}_${courseId}`);
-      if (progressData) {
-        const { completed, progress: progressValue } = JSON.parse(progressData);
-        setCompletedLessons(completed || []);
-        setProgress(progressValue || 0);
-      }
-    } catch (error) {
-      console.error('❌ Error loading progress:', error);
-    }
-  };
 
   const saveProgress = (lessonId, courseId) => {
     try {
