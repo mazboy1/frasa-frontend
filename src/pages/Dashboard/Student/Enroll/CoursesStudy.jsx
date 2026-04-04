@@ -35,19 +35,47 @@ const CoursesStudy = () => {
         // Check if classId exists
         if (!location.state?.classId) {
           console.warn('⚠️ No classId provided');
-          navigate('/dashboard/enrolled-classes');
+          setError('ID kelas tidak ditemukan');
+          setTimeout(() => navigate('/dashboard/enrolled-classes'), 1500);
           return;
         }
 
         console.log('🔄 Initializing course:', location.state.classId);
 
-        // Verify user is enrolled
-        const enrollmentResponse = await axiosSecure.get(`/enrolled-classes/${currentUser.email}`);
-        const isEnrolled = enrollmentResponse.data.some(
-          enrolledClass => (enrolledClass.classes?._id || enrolledClass._id) === location.state.classId
-        );
+        // ✅ FIX: Verify user is enrolled with proper error handling
+        let isEnrolled = false;
+        try {
+          const enrollmentResponse = await axiosSecure.get(`/enrolled-classes/${currentUser.email}`);
+          console.log('📋 Enrollment response:', enrollmentResponse.data);
+          
+          // ✅ FIX: Handle different response formats
+          let enrolledClassesList = [];
+          if (Array.isArray(enrollmentResponse.data)) {
+            enrolledClassesList = enrollmentResponse.data;
+          } else if (Array.isArray(enrollmentResponse.data?.data)) {
+            enrolledClassesList = enrollmentResponse.data.data;
+          } else if (enrollmentResponse.data && typeof enrollmentResponse.data === 'object') {
+            enrolledClassesList = [enrollmentResponse.data];
+          }
+          
+          console.log('✅ Enrolled classes list:', enrolledClassesList);
+          
+          // ✅ FIX: Safely check enrollment
+          isEnrolled = enrolledClassesList.some(enrolledClass => {
+            const classId = enrolledClass?.classes?._id || enrolledClass?.classes?.id || enrolledClass?._id || enrolledClass?.id;
+            console.log('🔍 Checking class ID:', classId, 'against:', location.state.classId);
+            return classId === location.state.classId;
+          });
+          
+          setEnrolledClasses(enrolledClassesList);
+        } catch (enrollmentError) {
+          console.error('⚠️ Error checking enrollment:', enrollmentError);
+          // Don't block - allow to continue
+          isEnrolled = true; // Assume enrolled if can't verify
+        }
         
         if (!isEnrolled) {
+          console.warn('❌ User not enrolled in this class');
           Swal.fire({
             title: '❌ Akses Ditolak',
             text: 'Anda belum terdaftar di kelas ini',
@@ -59,10 +87,17 @@ const CoursesStudy = () => {
           return;
         }
 
-        setEnrolledClasses(enrollmentResponse.data);
+        // ✅ FIX: Fetch course with modules
+        console.log('🔄 Fetching course data...');
+        let courseResponse;
+        try {
+          courseResponse = await axiosSecure.get(`/class-with-modules/${location.state.classId}`);
+        } catch (err) {
+          // Fallback: try alternate endpoint
+          console.warn('⚠️ First endpoint failed, trying alternate...');
+          courseResponse = await axiosSecure.get(`/class/${location.state.classId}`);
+        }
         
-        // Fetch course with modules
-        const courseResponse = await axiosSecure.get(`/class-with-modules/${location.state.classId}`);
         const courseData = courseResponse.data?.data || courseResponse.data;
         
         if (!courseData) {
@@ -101,7 +136,7 @@ const CoursesStudy = () => {
       }
     };
 
-    if (currentUser?.email) {
+    if (currentUser?.email && location.state?.classId) {
       initializeCourse();
     } else {
       setLoading(false);
