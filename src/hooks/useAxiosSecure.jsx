@@ -5,10 +5,9 @@ import useAuth from './useAuth';
 const useAxiosSecure = () => {
   const { logout } = useAuth();
   
-  // ✅ PENTING: baseURL dengan trailing slash, TANPA /api/
   const axiosInstance = useMemo(() => {
     return axios.create({
-      baseURL: 'https://frasa-backend.vercel.app/',
+      baseURL: 'https://frasa-backend.vercel.app',  // ← TANPA trailing slash!
     });
   }, []);
 
