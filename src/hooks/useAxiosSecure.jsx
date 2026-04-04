@@ -5,9 +5,10 @@ import useAuth from './useAuth';
 const useAxiosSecure = () => {
   const { logout } = useAuth();
   
+  // ✅ FIX: Tambah /api/ di baseURL agar sama dengan useAxiosFetch
   const axiosInstance = useMemo(() => {
     return axios.create({
-      baseURL: 'https://frasa-backend.vercel.app',  // ← TANPA trailing slash!
+      baseURL: 'https://frasa-backend.vercel.app/api/',
     });
   }, []);
 
@@ -15,11 +16,6 @@ const useAxiosSecure = () => {
     const requestInterceptor = axiosInstance.interceptors.request.use(
       (config) => {
         const token = localStorage.getItem('token');
-        
-        console.log('📤 [Axios Request]:', {
-          fullURL: config.baseURL + config.url,
-          hasToken: !!token
-        });
         
         if (token) {
           config.headers.Authorization = `Bearer ${token}`;
