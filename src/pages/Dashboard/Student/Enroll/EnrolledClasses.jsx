@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import useAxiosSecure from '../../../../hooks/useAxiosSecure';
 import useUser from '../../../../hooks/useUser';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
 
 const EnrolledClasses = () => {
@@ -11,6 +11,7 @@ const EnrolledClasses = () => {
   const [retryCount, setRetryCount] = useState(0);
   const axiosSecure = useAxiosSecure();
   const { currentUser } = useUser();
+  const navigate = useNavigate();
 
   useEffect(() => {
     // ✅ FIX: Validate state is always array
@@ -82,6 +83,18 @@ const EnrolledClasses = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('access-token');
     window.location.href = '/login';
+  };
+
+  // ✅ FIX: Navigate ke CoursesStudy dengan state (bukan query param)
+  const handleStartLearning = (classId) => {
+    if (!classId) {
+      Swal.fire('Error', 'ID kelas tidak valid', 'error');
+      return;
+    }
+    console.log('🎓 Starting course:', classId);
+    navigate('/dashboard/courses-study', { 
+      state: { classId } 
+    });
   };
 
   if (loading) {
@@ -200,7 +213,7 @@ const EnrolledClasses = () => {
                       className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
                       onError={(e) => {
                         e.target.style.display = 'none';
-                        e.target.parentElement.innerHTML = '<div class="flex items-center justify-center h-full bg-gradient-to-br from-gray-300 to-gray-400"><span class="text-white text-center font-medium">📷 Gambar tidak tersedia</span></div>';
+                        e.target.parentElement.innerHTML = '<div class="flex items-center justify-center h-full bg-gradient-to-br from-gray-300 to-gray-400"><span class="text-white text-center font-medium">📷 No Image</span></div>';
                       }}
                     />
                   ) : (
@@ -246,12 +259,13 @@ const EnrolledClasses = () => {
                       <p className="font-bold text-secondary text-lg">
                         Rp{classPrice.toLocaleString('id-ID')}
                       </p>
-                      <Link 
-                        to={`/dashboard/courses-study?classId=${classId}`}
+                      {/* ✅ FIX: Use onClick handler instead of Link */}
+                      <button
+                        onClick={() => handleStartLearning(classId)}
                         className="bg-secondary hover:bg-secondary-dark text-white font-medium py-2 px-4 rounded-lg transition-all duration-200 text-sm whitespace-nowrap hover:shadow-md"
                       >
                         ▶️ Belajar
-                      </Link>
+                      </button>
                     </div>
                   </div>
                 </div>
