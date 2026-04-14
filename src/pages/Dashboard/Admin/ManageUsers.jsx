@@ -3,6 +3,13 @@ import useAxiosSecure from '../../../hooks/useAxiosSecure';
 import useUser from '../../../hooks/useUser';
 import Swal from 'sweetalert2';
 
+// ✅ Utility function untuk convert imgBB URL
+const convertImgBBUrl = (url) => {
+  if (!url) return url;
+  // Ubah i.ibb.co menjadi i.ibb.co.com
+  return url.replace('i.ibb.co/', 'i.ibb.co.com/');
+};
+
 const ManageUsers = () => {
   const { currentUser } = useUser();
   const axiosSecure = useAxiosSecure();
@@ -199,9 +206,12 @@ const ManageUsers = () => {
                     <div className="flex items-center gap-3">
                       {user.photoUrl ? (
                         <img 
-                          src={user.photoUrl} 
+                          src={convertImgBBUrl(user.photoUrl)}
                           alt={user.name}
                           className="w-10 h-10 rounded-full object-cover"
+                          onError={(e) => {
+                            e.target.src = "https://via.placeholder.com/40?text=" + user.name.charAt(0).toUpperCase();
+                          }}
                         />
                       ) : (
                         <div className="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center">
