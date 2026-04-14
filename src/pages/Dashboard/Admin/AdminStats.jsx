@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import useAxiosSecure from '../../../hooks/useAxiosSecure';
-import { FaChalkboardTeacher, FaBookOpen } from "react-icons/fa";
-import { MdPendingActions, MdPeople } from "react-icons/md";
+import { FaChalkboardTeacher, FaBookOpen, FaUsers } from "react-icons/fa";
+import { MdPendingActions } from "react-icons/md";
+import { HashLoader } from 'react-spinners';
 
 const AdminStats = ({ users }) => {
   const [data, setData] = useState(null);
@@ -33,75 +34,78 @@ const AdminStats = ({ users }) => {
 
   if (loading) {
     return (
-      <div className="container mx-auto px-4 py-6">
-        <h2 className="text-2xl font-bold text-gray-800 mb-6">Statistik Admin</h2>
-        <div className="flex justify-center items-center h-40">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-        </div>
+      <div className="flex justify-center items-center py-12">
+        <HashLoader color="#36d7b7" size={50} />
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto px-4 py-6">
-      <h2 className="text-2xl font-bold text-gray-800 mb-6">Statistik Admin</h2>
-      
+    <div>
       {error && (
-        <div className="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded">
+        <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg">
           ⚠️ {error}
         </div>
       )}
       
       <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6'>
-        {/* Total Member Card */}
-        <div className="bg-white rounded-lg shadow-md p-6 flex items-center border border-gray-200 hover:shadow-lg transition-shadow">
-          <div className="p-3 bg-blue-100 rounded-full mr-4">
-            <MdPeople className="h-8 w-8 text-blue-600" />
-          </div>
-          <div>
-            <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wider">Total Member</h3>
-            <p className="text-2xl font-semibold text-gray-900">
-              {users?.length || 0}
-            </p>
+        {/* Total Members Card */}
+        <div className="bg-white rounded-lg shadow-md p-6 border-t-4 border-blue-500 hover:shadow-lg transition-shadow">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-gray-600 text-sm font-medium">Total Pengguna</p>
+              <h3 className="text-3xl font-bold text-blue-600 mt-2">
+                {users?.length || 0}
+              </h3>
+            </div>
+            <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center">
+              <FaUsers className="text-2xl text-blue-600" />
+            </div>
           </div>
         </div>
 
         {/* Approved Classes Card */}
-        <div className="bg-white rounded-lg shadow-md p-6 flex items-center border border-gray-200 hover:shadow-lg transition-shadow">
-          <div className="p-3 bg-green-100 rounded-full mr-4">
-            <FaBookOpen className="h-8 w-8 text-green-600" />
-          </div>
-          <div>
-            <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wider">Kelas Disetujui</h3>
-            <p className="text-2xl font-semibold text-gray-900">
-              {data?.approvedClasses || 0}
-            </p>
+        <div className="bg-white rounded-lg shadow-md p-6 border-t-4 border-green-500 hover:shadow-lg transition-shadow">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-gray-600 text-sm font-medium">Kelas Disetujui</p>
+              <h3 className="text-3xl font-bold text-green-600 mt-2">
+                {data?.approvedClasses || 0}
+              </h3>
+            </div>
+            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
+              <FaBookOpen className="text-2xl text-green-600" />
+            </div>
           </div>
         </div>
 
         {/* Instructors Card */}
-        <div className="bg-white rounded-lg shadow-md p-6 flex items-center border border-gray-200 hover:shadow-lg transition-shadow">
-          <div className="p-3 bg-purple-100 rounded-full mr-4">
-            <FaChalkboardTeacher className="h-8 w-8 text-purple-600" />
-          </div>
-          <div>
-            <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wider">Instruktur</h3>
-            <p className="text-2xl font-semibold text-gray-900">
-              {data?.instructors || 0}
-            </p>
+        <div className="bg-white rounded-lg shadow-md p-6 border-t-4 border-purple-500 hover:shadow-lg transition-shadow">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-gray-600 text-sm font-medium">Total Instruktur</p>
+              <h3 className="text-3xl font-bold text-purple-600 mt-2">
+                {data?.instructors || 0}
+              </h3>
+            </div>
+            <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center">
+              <FaChalkboardTeacher className="text-2xl text-purple-600" />
+            </div>
           </div>
         </div>
 
         {/* Pending Classes Card */}
-        <div className="bg-white rounded-lg shadow-md p-6 flex items-center border border-gray-200 hover:shadow-lg transition-shadow">
-          <div className="p-3 bg-yellow-100 rounded-full mr-4">
-            <MdPendingActions className="h-8 w-8 text-yellow-600" />
-          </div>
-          <div>
-            <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wider">Menunggu Persetujuan</h3>
-            <p className="text-2xl font-semibold text-gray-900">
-              {data?.pendingClasses || 0}
-            </p>
+        <div className="bg-white rounded-lg shadow-md p-6 border-t-4 border-orange-500 hover:shadow-lg transition-shadow">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-gray-600 text-sm font-medium">Menunggu Persetujuan</p>
+              <h3 className="text-3xl font-bold text-orange-600 mt-2">
+                {data?.pendingClasses || 0}
+              </h3>
+            </div>
+            <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center">
+              <MdPendingActions className="text-2xl text-orange-600" />
+            </div>
           </div>
         </div>
       </div>
