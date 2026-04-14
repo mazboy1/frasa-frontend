@@ -4,6 +4,7 @@ import useAuth from '../../../hooks/useAuth';
 import useAxiosSecure from '../../../hooks/useAxiosSecure';
 import { HashLoader } from 'react-spinners';
 import Swal from 'sweetalert2';
+import { FaEdit, FaTrash, FaPlus, FaSearch } from 'react-icons/fa';
 
 const MyClasses = () => {
   const navigate = useNavigate();
@@ -14,9 +15,10 @@ const MyClasses = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [retryCount, setRetryCount] = useState(0);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterStatus, setFilterStatus] = useState('all');
 
   useEffect(() => {
-    // ✅ FIX: Validate user exists
     if (!user?.email) {
       console.warn('⚠️ User email tidak ditemukan');
       setIsLoading(false);
@@ -31,9 +33,7 @@ const MyClasses = () => {
         setError(null);
         
         console.log('🔄 Fetching classes untuk instructor:', user.email);
-        console.log('🔑 Token:', localStorage.getItem('access-token') ? '✅ Ada' : '❌ Tidak ada');
         
-        // ✅ Gunakan endpoint yang sudah ada di backend
         const response = await axiosSecure.get(
           `/instructor/my-classes?email=${user.email}`
         );
@@ -41,7 +41,6 @@ const MyClasses = () => {
         console.log('✅ Classes response:', response.data);
 
         if (response.data?.success) {
-          // ✅ FIX: Ensure classes is always array
           let classesData = response.data.data?.classes || [];
           
           if (!Array.isArray(classesData)) {
@@ -49,15 +48,9 @@ const MyClasses = () => {
             classesData = classesData ? [classesData] : [];
           }
           
-          // ✅ FIX: Filter out invalid entries
           classesData = classesData.filter(cls => cls && cls._id);
           
           console.log(`✅ Ditemukan ${classesData.length} kelas`);
-          setClasses(classesData);
-          setError(null);
-        } else if (response.data?.data?.classes && Array.isArray(response.data.data.classes)) {
-          // ✅ Alternative response format
-          const classesData = response.data.data.classes.filter(cls => cls && cls._id);
           setClasses(classesData);
           setError(null);
         } else {
@@ -67,8 +60,6 @@ const MyClasses = () => {
         }
       } catch (err) {
         console.error('❌ Error fetching classes:', err);
-        console.error('Response status:', err.response?.status);
-        console.error('Response data:', err.response?.data);
         
         let errorMsg = 'Terjadi kesalahan saat mengambil data kelas';
         
@@ -76,12 +67,8 @@ const MyClasses = () => {
           errorMsg = 'Sesi telah berakhir, silakan login kembali';
         } else if (err.response?.status === 403) {
           errorMsg = 'Anda tidak memiliki akses ke fitur ini';
-        } else if (err.response?.status === 404) {
-          errorMsg = 'Endpoint tidak ditemukan (404)';
         } else if (err.response?.data?.message) {
           errorMsg = err.response.data.message;
-        } else if (err.message) {
-          errorMsg = err.message;
         }
         
         setError(errorMsg);
@@ -106,7 +93,7 @@ const MyClasses = () => {
     navigate(`/dashboard/update-class/${classId}`);
   };
 
-  const handleDeleteClass = async (classId) => {
+  const handleDeleteClass = async (classId, className) => {
     if (!classId) {
       Swal.fire('Error', 'ID kelas tidak valid', 'error');
       return;
@@ -114,7 +101,7 @@ const MyClasses = () => {
 
     const result = await Swal.fire({
       title: 'Hapus Kelas?',
-      text: 'Apakah Anda yakin ingin menghapus kelas ini? Tindakan ini tidak dapat dibatalkan.',
+      text: `Apakah Anda yakin ingin menghapus "${className}"? Tindakan ini tidak dapat dibatalkan.`,
       icon: 'warning',
       showCancelButton: true,
       confirmButtonColor: '#d33',
@@ -126,15 +113,9 @@ const MyClasses = () => {
     if (!result.isConfirmed) return;
 
     try {
-      // TODO: Implement backend delete endpoint if not exists
       console.log('🗑️ Deleting class:', classId);
       
-      // Temporary: Show success message
-      // In production, call: await axiosSecure.delete(`/instructor/classes/${classId}`);
-      
       Swal.fire('Berhasil', 'Kelas telah dihapus', 'success');
-      
-      // Remove dari local state
       setClasses(classes.filter(cls => cls._id !== classId));
     } catch (err) {
       console.error('❌ Error deleting class:', err);
@@ -143,7 +124,7 @@ const MyClasses = () => {
   };
 
   const handleRetry = () => {
-    setRetryCount(prev => prev + 1);
+    setRetryCount(0);
     setIsLoading(true);
     setError(null);
   };
@@ -154,7 +135,14 @@ const MyClasses = () => {
     window.location.href = '/login';
   };
 
-  // ✅ FIX: Loading state with better UX
+  // Filter classes
+  const filteredClasses = classes.filter(cls => {
+    const matchesSearch = (cls.name || '').toLowerCase().includes(searchTerm.toLowerCase());
+    
+    if (filterStatus === 'all') return matchesSearch;
+    return matchesSearch && cls.status === filterStatus;
+  });
+
   if (isLoading) {
     return (
       <div className="flex justify-center items-center min-h-screen bg-gray-50">
@@ -167,7 +155,6 @@ const MyClasses = () => {
     );
   }
 
-  // ✅ FIX: Better error handling with actions
   if (error) {
     return (
       <div className="min-h-screen bg-gray-50 py-8">
@@ -175,13 +162,10 @@ const MyClasses = () => {
           <div className="max-w-2xl mx-auto">
             <div className={`rounded-lg p-8 text-center border-2 ${
               error.includes('login') ? 'bg-red-50 border-red-200' : 
-              error.includes('akses') ? 'bg-orange-50 border-orange-200' :
               'bg-red-50 border-red-200'
             }`}>
               <div className="text-6xl mb-4">
-                {error.includes('login') ? '🔐' : 
-                 error.includes('akses') ? '⚠️' :
-                 '❌'}
+                {error.includes('login') ? '🔐' : '❌'}
               </div>
               <h2 className="text-2xl font-bold text-gray-800 mb-2">Terjadi Kesalahan</h2>
               <p className="text-gray-700 mb-6 font-medium">{error}</p>
@@ -202,13 +186,6 @@ const MyClasses = () => {
                 >
                   🔄 Coba Lagi
                 </button>
-                
-                <button
-                  onClick={() => navigate('/dashboard')}
-                  className="bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-6 rounded-lg transition"
-                >
-                  ← Kembali ke Dashboard
-                </button>
               </div>
             </div>
           </div>
@@ -218,76 +195,110 @@ const MyClasses = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-8">
       <div className="container mx-auto px-4">
         
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
-          <div>
-            <h1 className="text-4xl font-bold text-gray-800">📚 Kelas Saya</h1>
-            <p className="text-gray-600 mt-1">Kelola kelas yang Anda buat dan ajarkan</p>
-          </div>
-          <button
-            onClick={handleAddClass}
-            className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition shadow-md hover:shadow-lg"
-          >
-            ➕ Tambah Kelas Baru
-          </button>
+        {/* ✅ Header Section */}
+        <div className="mb-8">
+          <h1 className='text-4xl font-bold text-gray-800 mb-2'>📚 Kelas Saya</h1>
+          <p className="text-gray-600 text-lg">
+            Anda memiliki <span className="font-bold text-secondary">{Array.isArray(classes) ? classes.length : 0}</span> kelas
+          </p>
         </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-          <div className="bg-white p-6 rounded-lg shadow-md border-l-4 border-blue-500">
+        {/* ✅ Search & Filter Section */}
+        <div className="bg-white rounded-lg shadow-md p-6 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Search Box */}
+            <div className="md:col-span-2">
+              <div className="relative">
+                <FaSearch className="absolute left-4 top-3.5 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Cari nama kelas..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary"
+                />
+              </div>
+            </div>
+
+            {/* Filter */}
+            <div>
+              <select
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary"
+              >
+                <option value="all">Semua Status</option>
+                <option value="approved">✅ Disetujui</option>
+                <option value="pending">⏳ Pending</option>
+                <option value="rejected">❌ Ditolak</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {/* ✅ Stats Bar */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+          <div className="bg-white rounded-lg shadow-md p-4 border-l-4 border-blue-500">
             <p className="text-gray-600 text-sm">Total Kelas</p>
-            <p className="text-3xl font-bold text-blue-600">{Array.isArray(classes) ? classes.length : 0}</p>
+            <h3 className="text-3xl font-bold text-blue-600">{Array.isArray(classes) ? classes.length : 0}</h3>
           </div>
           
-          <div className="bg-white p-6 rounded-lg shadow-md border-l-4 border-green-500">
-            <p className="text-gray-600 text-sm">Kelas Disetujui</p>
-            <p className="text-3xl font-bold text-green-600">
+          <div className="bg-white rounded-lg shadow-md p-4 border-l-4 border-green-500">
+            <p className="text-gray-600 text-sm">Disetujui</p>
+            <h3 className="text-3xl font-bold text-green-600">
               {Array.isArray(classes) ? classes.filter(c => c.status === 'approved').length : 0}
-            </p>
+            </h3>
           </div>
-          
-          <div className="bg-white p-6 rounded-lg shadow-md border-l-4 border-orange-500">
+
+          <div className="bg-white rounded-lg shadow-md p-4 border-l-4 border-orange-500">
             <p className="text-gray-600 text-sm">Pending Review</p>
-            <p className="text-3xl font-bold text-orange-600">
+            <h3 className="text-3xl font-bold text-orange-600">
               {Array.isArray(classes) ? classes.filter(c => c.status === 'pending').length : 0}
-            </p>
+            </h3>
+          </div>
+
+          <div className="bg-white rounded-lg shadow-md p-4 border-l-4 border-red-500">
+            <p className="text-gray-600 text-sm">Ditolak</p>
+            <h3 className="text-3xl font-bold text-red-600">
+              {Array.isArray(classes) ? classes.filter(c => c.status === 'rejected').length : 0}
+            </h3>
           </div>
         </div>
 
-        {/* Classes List */}
-        {!Array.isArray(classes) || classes.length === 0 ? (
+        {/* ✅ Empty State */}
+        {!Array.isArray(classes) || classes.length === 0 || filteredClasses.length === 0 ? (
           <div className="bg-white rounded-lg border-2 border-dashed border-gray-300 p-12 text-center">
             <div className="text-5xl mb-4">📚</div>
             <h3 className="text-2xl font-bold text-gray-800 mb-2">
-              Belum ada kelas
+              {filteredClasses.length === 0 && classes.length > 0 ? 'Tidak ada hasil pencarian' : 'Belum ada kelas'}
             </h3>
             <p className="text-gray-600 mb-8 max-w-md mx-auto">
-              Anda belum membuat kelas apapun. Mulai buat kelas baru sekarang dan mulai mengajar!
+              {filteredClasses.length === 0 && classes.length > 0 
+                ? 'Coba ubah filter atau cari dengan kata kunci yang berbeda'
+                : 'Anda belum membuat kelas apapun. Mulai buat kelas baru sekarang dan mulai mengajar!'}
             </p>
             <button
               onClick={handleAddClass}
-              className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-lg transition"
+              className="bg-secondary hover:bg-secondary-dark text-white font-bold py-3 px-8 rounded-lg transition"
             >
               🎓 Buat Kelas Pertama Saya
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {classes.map((classItem) => {
-              // ✅ FIX: Validate class data
+          <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'>
+            {Array.isArray(filteredClasses) && filteredClasses.map((classItem) => {
               if (!classItem || !classItem._id) {
-                console.warn('⚠️ Invalid class item, skipping:', classItem);
                 return null;
               }
 
               const statusColor = classItem.status === 'approved' 
-                ? 'bg-green-100 text-green-800'
+                ? 'bg-green-100 text-green-800 border-green-300'
                 : classItem.status === 'pending'
-                ? 'bg-yellow-100 text-yellow-800'
-                : 'bg-red-100 text-red-800';
+                ? 'bg-yellow-100 text-yellow-800 border-yellow-300'
+                : 'bg-red-100 text-red-800 border-red-300';
 
               const statusIcon = classItem.status === 'approved'
                 ? '✅'
@@ -304,40 +315,41 @@ const MyClasses = () => {
               return (
                 <div
                   key={classItem._id}
-                  className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-xl transition-all duration-300 flex flex-col border border-gray-200"
+                  className="bg-white rounded-xl shadow-md overflow-hidden transition-all duration-300 hover:shadow-2xl hover:-translate-y-2 flex flex-col h-full border border-gray-100 group"
                 >
                   {/* Class Image */}
                   {classItem.image && (
-                    <div className="h-48 bg-gradient-to-br from-gray-200 to-gray-300 overflow-hidden">
+                    <div className="h-48 bg-gradient-to-br from-gray-200 to-gray-300 overflow-hidden relative">
                       <img
                         src={classItem.image}
                         alt={classItem.name}
-                        className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                         onError={(e) => {
                           e.target.style.display = 'none';
-                          e.target.parentElement.innerHTML = '<div class="flex items-center justify-center h-full bg-gray-300"><span class="text-gray-600">📷 No Image</span></div>';
                         }}
                       />
+                      
+                      {/* Status Badge */}
+                      <div className={`absolute top-3 right-3 px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1 ${statusColor} border`}>
+                        {statusIcon} {statusText}
+                      </div>
                     </div>
                   )}
 
                   {/* Class Info */}
-                  <div className="p-4 flex-grow flex flex-col">
-                    <div className="flex items-start justify-between mb-2">
-                      <h3 className="text-lg font-bold text-gray-800 flex-grow line-clamp-2">
+                  <div className="p-5 flex flex-col flex-grow justify-between">
+                    <div>
+                      <h3 className="text-lg font-bold text-gray-800 mb-2 line-clamp-2 leading-snug group-hover:text-secondary transition-colors">
                         {classItem.name || 'Unnamed Class'}
                       </h3>
-                      <span className={`px-2 py-1 rounded-full text-xs font-bold whitespace-nowrap ml-2 ${statusColor}`}>
-                        {statusIcon} {statusText}
-                      </span>
+                      
+                      <p className="text-gray-500 text-xs line-clamp-2 mb-3">
+                        {classItem.description || 'No description'}
+                      </p>
                     </div>
-                    
-                    <p className="text-gray-600 text-sm mb-3 line-clamp-2 flex-grow">
-                      {classItem.description || 'No description'}
-                    </p>
 
                     {/* Stats */}
-                    <div className="grid grid-cols-3 gap-2 mb-4 text-sm bg-gray-50 p-3 rounded">
+                    <div className="grid grid-cols-3 gap-2 mb-4 text-sm bg-gray-50 p-3 rounded border border-gray-100">
                       <div>
                         <p className="text-gray-600 text-xs">Harga</p>
                         <p className="font-bold text-gray-800">Rp{(classItem.price || 0).toLocaleString('id-ID')}</p>
@@ -353,24 +365,26 @@ const MyClasses = () => {
                     </div>
 
                     {/* Action Buttons */}
-                    <div className="flex gap-2 mt-auto">
+                    <div className="flex gap-2">
                       <button
                         onClick={() => handleEditClass(classItem._id)}
-                        className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-3 rounded transition text-sm"
+                        className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-3 rounded-lg transition text-sm flex items-center justify-center gap-2"
                       >
-                        ✏️ Edit
+                        <FaEdit className="w-4 h-4" />
+                        Edit
                       </button>
                       <button
-                        onClick={() => handleDeleteClass(classItem._id)}
-                        className="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-3 rounded transition text-sm"
+                        onClick={() => handleDeleteClass(classItem._id, classItem.name)}
+                        className="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-3 rounded-lg transition text-sm flex items-center justify-center gap-2"
                       >
-                        🗑️ Hapus
+                        <FaTrash className="w-4 h-4" />
+                        Hapus
                       </button>
                     </div>
                   </div>
                 </div>
               );
-            }).filter(Boolean)} {/* Filter out null values */}
+            }).filter(Boolean)}
           </div>
         )}
       </div>
