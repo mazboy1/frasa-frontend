@@ -7,6 +7,13 @@ import { FaBars } from "react-icons/fa";
 import { AuthContext } from '../../utilities/providers/AuthProvider';
 import Swal from 'sweetalert2';
 
+// ✅ Utility function untuk convert imgBB URL
+const convertImgBBUrl = (url) => {
+  if (!url) return url;
+  // Ubah i.ibb.co menjadi i.ibb.co.com
+  return url.replace('i.ibb.co/', 'i.ibb.co.com/');
+};
+
 const navLinks = [
   { name: 'Beranda', route: '/' },
   { name: 'Mentor', route: '/instructors' },
@@ -231,7 +238,7 @@ const NavBar = () => {
                     <li className="flex items-center gap-4">
                       <div className="flex items-center gap-3">
                         <img 
-                          src={user?.photoURL || user?.photoUrl || "/default-avatar.png"} 
+                          src={convertImgBBUrl(user?.photoURL || user?.photoUrl || "/default-avatar.png")}
                           alt="Profil pengguna" 
                           className='h-10 w-10 rounded-full object-cover border-2 border-primary'
                           onError={(e) => {
@@ -355,7 +362,7 @@ const NavBar = () => {
                 {/* User Info in Mobile Menu */}
                 <li className="flex items-center gap-3 p-4 border-t border-gray-200 dark:border-gray-700">
                   <img 
-                    src={user.photoURL || user.photoUrl || "/default-avatar.png"} 
+                    src={convertImgBBUrl(user.photoURL || user.photoUrl || "/default-avatar.png")}
                     alt="Profil pengguna" 
                     className='h-12 w-12 rounded-full object-cover border-2 border-primary'
                     onError={(e) => {
