@@ -4,9 +4,8 @@ import useUser from '../../../hooks/useUser';
 import useAxiosSecure from '../../../hooks/useAxiosSecure';
 import WelcomeImg from "../../../assets/dashboard/urban-welcome.svg";
 import AdminStats from './AdminStats';
-// ✅ FIX: Replace FaPendingActions with MdPendingActions
-import { FaUsers, FaBook, FaCheckCircle, FaCog } from 'react-icons/fa';
-import { MdPendingActions } from 'react-icons/md';
+// ✅ FIX: Use FaClipboardList instead of FaPendingActions (which doesn't exist in react-icons/fa)
+import { FaUsers, FaBook, FaCheckCircle, FaCog, FaClipboardList } from 'react-icons/fa';
 
 const AdminHome = () => {
   const { currentUser } = useUser();
@@ -126,8 +125,8 @@ const AdminHome = () => {
               className="p-6 bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg border-2 border-orange-200 hover:border-orange-400 hover:shadow-md transition-all group"
             >
               <div className="flex items-center gap-3 mb-2">
-                {/* ✅ FIX: Use MdPendingActions instead of FaPendingActions */}
-                <MdPendingActions className="text-2xl text-orange-600 group-hover:scale-110 transition-transform" />
+                {/* ✅ FIX: Use FaClipboardList from react-icons/fa (available icon) */}
+                <FaClipboardList className="text-2xl text-orange-600 group-hover:scale-110 transition-transform" />
               </div>
               <h3 className="font-bold text-gray-800 mb-1">Aplikasi</h3>
               <p className="text-sm text-gray-600">Review aplikasi instructor</p>
