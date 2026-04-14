@@ -25,9 +25,21 @@ const CheckoutPayment = ({ price, cartItems, itemId }) => {
     
     axiosSecure.post('/create-payment-intent', { price: price })
       .then(res => {
-        console.log('✅ ClientSecret received:', res.data);
-        setClientSecret(res.data.clientSecret);
-        setMessage(''); // Clear any previous error
+        console.log('✅ ClientSecret response:', res.data);
+        
+        // ✅ FIX: Handle nested response format
+        // Backend mungkin return {clientSecret: "..."} atau {success: true, data: {clientSecret: "..."}}
+        const secret = res.data?.clientSecret || res.data?.data?.clientSecret;
+        console.log('🔑 Extracted clientSecret:', secret);
+        
+        if (secret) {
+          setClientSecret(secret);
+          setMessage('');
+          console.log('✅ ClientSecret set successfully');
+        } else {
+          console.error('❌ ClientSecret not found in response:', res.data);
+          setMessage('❌ Gagal mendapatkan payment secret dari server');
+        }
       })
       .catch(err => {
         console.error('❌ Error creating payment intent:', {
