@@ -20,21 +20,46 @@ const CheckoutPayment = ({ price, cartItems, itemId }) => {
   }
 
   useEffect(() => {
+    console.log('💳 [Payment Init] Creating payment intent with price:', price);
+    console.log('🔐 Token:', localStorage.getItem('token') ? '✅ Exists' : '❌ Missing');
+    
     axiosSecure.post('/create-payment-intent', { price: price })
       .then(res => {
+        console.log('✅ ClientSecret received:', res.data);
         setClientSecret(res.data.clientSecret);
+        setMessage(''); // Clear any previous error
       })
       .catch(err => {
-        setMessage("Gagal membuat sesi pembayaran");
+        console.error('❌ Error creating payment intent:', {
+          status: err.response?.status,
+          message: err.response?.data?.message,
+          error: err.message,
+          data: err.response?.data
+        });
+        setMessage("❌ Gagal membuat sesi pembayaran: " + (err.response?.data?.error || err.message));
       });
   }, [price, axiosSecure]);
+
+  // ✅ DEBUG: Monitor button state
+  useEffect(() => {
+    const isDisabled = processing || !stripe || !clientSecret;
+    console.log('🔘 Button State:', {
+      processing,
+      stripe: !!stripe,
+      clientSecret: !!clientSecret,
+      buttonDisabled: isDisabled
+    });
+  }, [processing, stripe, clientSecret]);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
     setMessage("");
     setProcessing(true);
     
+    console.log('🔄 [Payment Submit] Starting payment process...');
+    
     if (!stripe || !elements) {
+      console.error('❌ Stripe or Elements not initialized');
       setMessage("Sistem pembayaran belum siap");
       setProcessing(false);
       return;
@@ -42,12 +67,15 @@ const CheckoutPayment = ({ price, cartItems, itemId }) => {
     
     const card = elements.getElement(CardElement);
     if (!card) {
+      console.error('❌ CardElement not found');
       setMessage("Form kartu tidak ditemukan");
       setProcessing(false);
       return;
     }
 
     try {
+      console.log('📤 Creating payment method...');
+      
       // Create payment method
       const { error: paymentMethodError, paymentMethod } = await stripe.createPaymentMethod({
         type: 'card',
@@ -55,10 +83,14 @@ const CheckoutPayment = ({ price, cartItems, itemId }) => {
       });
       
       if (paymentMethodError) {
+        console.error('❌ Payment method error:', paymentMethodError);
         setMessage(paymentMethodError.message);
         setProcessing(false);
         return;
       }
+
+      console.log('✅ Payment method created:', paymentMethod.id);
+      console.log('📤 Confirming card payment with clientSecret:', clientSecret);
 
       // Confirm card payment
       const { paymentIntent, error: confirmError } = await stripe.confirmCardPayment(clientSecret, {
@@ -66,12 +98,17 @@ const CheckoutPayment = ({ price, cartItems, itemId }) => {
       });
 
       if (confirmError) {
+        console.error('❌ Confirm payment error:', confirmError);
         setMessage(confirmError.message);
         setProcessing(false);
         return;
       }
       
+      console.log('✅ Payment intent:', paymentIntent);
+      
       if (paymentIntent.status === "succeeded") {
+        console.log('💰 Payment succeeded! Saving to database...');
+        
         const paymentData = {
           transactionId: paymentIntent.id,
           paymentMethod: paymentIntent.payment_method_types[0],
@@ -84,23 +121,40 @@ const CheckoutPayment = ({ price, cartItems, itemId }) => {
           date: new Date()
         };
 
+        console.log('📊 Payment data to save:', paymentData);
+
         // Tentukan config berdasarkan jenis pembayaran
         const config = cartItems && cartItems.length > 0 
           ? {} 
           : { params: { classId: itemId } };
         
-        const response = await axiosSecure.post('/payment-info', paymentData, config);
-        
-        if (response.data.success) {
-          setSucceeded('Pembayaran berhasil! Mengarahkan ke kelas...');
-          setTimeout(() => {
-            navigate('/dashboard/enrolled-class');
-          }, 2000);
-        } else {
-          setMessage('Pembayaran gagal, silakan coba lagi');
+        try {
+          const response = await axiosSecure.post('/payment-info', paymentData, config);
+          console.log('✅ Server response:', response.data);
+          
+          if (response.data.success) {
+            setSucceeded('✅ Pembayaran berhasil! Mengarahkan ke kelas...');
+            setTimeout(() => {
+              navigate('/dashboard/enrolled-class');
+            }, 2000);
+          } else {
+            console.error('❌ Server returned error:', response.data);
+            setMessage('Pembayaran berhasil tapi gagal menyimpan: ' + response.data.message);
+          }
+        } catch (serverErr) {
+          console.error('❌ Server error saving payment:', {
+            status: serverErr.response?.status,
+            data: serverErr.response?.data,
+            message: serverErr.message
+          });
+          setMessage('Error menyimpan pembayaran: ' + (serverErr.response?.data?.message || serverErr.message));
         }
+      } else {
+        console.warn('⚠️ Payment status:', paymentIntent.status);
+        setMessage('Status pembayaran: ' + paymentIntent.status);
       }
     } catch (err) {
+      console.error('❌ Unexpected error:', err);
       setMessage('Error: ' + (err.response?.data?.error || err.message));
     } finally {
       setProcessing(false);
@@ -161,20 +215,20 @@ const CheckoutPayment = ({ price, cartItems, itemId }) => {
         </button>
 
         {message && (
-          <div className="p-3 bg-red-100 text-red-700 rounded-lg">
+          <div className="p-3 bg-red-100 text-red-700 rounded-lg text-sm">
             {message}
           </div>
         )}
         
         {succeeded && (
-          <div className="p-3 bg-green-100 text-green-700 rounded-lg">
+          <div className="p-3 bg-green-100 text-green-700 rounded-lg text-sm">
             {succeeded}
           </div>
         )}
 
         {!clientSecret && (
-          <div className="p-3 bg-yellow-100 text-yellow-700 rounded-lg">
-            Menyiapkan pembayaran...
+          <div className="p-3 bg-yellow-100 text-yellow-700 rounded-lg text-sm">
+            ⏳ Menyiapkan pembayaran...
           </div>
         )}
 
