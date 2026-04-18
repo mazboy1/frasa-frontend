@@ -9,11 +9,11 @@ const Gallery = () => {
   return (
     <section className='md:w-[80%] mx-auto my-28 px-4'>
         <div className="mb-16 text-center">
-            <h1 className='text-4xl md:text-5xl font-bold text-gray-800'>
-                Our Gallery
+             <h1 className='text-4xl md:text-5xl font-bold text-gray-800'>
+                Galeri Kami
             </h1>
             <p className="mt-4 text-lg text-gray-600 max-w-2xl mx-auto">
-                Explore our collection of memorable moments and beautiful works
+                Sekilas momen dan karya kami
             </p>
         </div>
 
