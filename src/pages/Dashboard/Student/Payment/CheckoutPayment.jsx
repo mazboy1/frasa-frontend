@@ -188,7 +188,7 @@ const CheckoutPayment = ({ price, cartItems, itemId }) => {
           Pembayaran Kelas
         </h1>
         <p className="text-lg text-secondary font-semibold mt-2">
-          Rp{(price * 15000).toLocaleString('id-ID')}
+          Rp{Number(price).toLocaleString("id-ID")}
         </p>
         <p className="text-gray-600 mt-2">
           {cartItems && cartItems.length > 1 
